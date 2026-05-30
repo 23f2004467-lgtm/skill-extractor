@@ -21,7 +21,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
             background: #fff;
             border-radius: 8px;
@@ -31,15 +31,41 @@
 
         h1 {
             font-size: 1.8rem;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             color: #1a1a1a;
         }
 
         .subtitle {
             color: #666;
-            margin-bottom: 25px;
-            font-size: 0.95rem;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
         }
+
+        .difficulty-legend {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-box.beginner { background: #1b5e20; }
+        .legend-box.intermediate { background: #e65100; }
+        .legend-box.advanced { background: #b71c1c; }
 
         .tabs {
             display: flex;
@@ -79,6 +105,12 @@
             display: block;
         }
 
+        .input-hint {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 6px;
+        }
+
         select, input[type="text"] {
             width: 100%;
             max-width: 500px;
@@ -90,7 +122,7 @@
 
         textarea {
             width: 100%;
-            min-height: 200px;
+            min-height: 180px;
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -138,6 +170,20 @@
 
         .btn-secondary:hover {
             background: #e0e0e0;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: #0066cc;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0;
+            text-decoration: underline;
+        }
+
+        .btn-text:hover {
+            color: #0052a3;
         }
 
         .spinner {
@@ -198,13 +244,8 @@
             color: #fff;
         }
 
-        .badge-diff {
-            background: #e0e0e0;
-            color: #555;
-        }
-
         .section-title {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             margin-bottom: 10px;
             margin-top: 20px;
@@ -215,6 +256,29 @@
             margin-top: 0;
         }
 
+        .mermaid-legend {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .mermaid-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mermaid-line {
+            width: 20px;
+            height: 2px;
+        }
+
+        .mermaid-line.prereq { background: #ff9800; }
+        .mermaid-line.related { background: #2196f3; border-top: 2px dashed #2196f3; height: 0; }
+        .mermaid-line.subtopic { background: #4caf50; border-top: 2px dotted #4caf50; height: 0; }
+
         .mermaid-container {
             background: #fafafa;
             border: 1px solid #eee;
@@ -222,6 +286,8 @@
             padding: 15px;
             margin-bottom: 15px;
             overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         .mermaid-row {
@@ -238,7 +304,7 @@
         }
 
         .mermaid-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #666;
             margin-bottom: 8px;
             font-weight: 500;
@@ -246,8 +312,8 @@
 
         .topics-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
         }
 
         .topic-card {
@@ -257,23 +323,30 @@
             border: 1px solid #eee;
         }
 
+        .topic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 6px;
+        }
+
         .topic-name {
             font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 4px;
+            font-size: 0.9rem;
         }
 
         .topic-desc {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #555;
             margin-bottom: 8px;
+            line-height: 1.4;
         }
 
         .topic-diff {
             display: inline-block;
             padding: 2px 8px;
             border-radius: 3px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 500;
         }
 
@@ -290,6 +363,10 @@
         .topic-diff.advanced {
             background: #ffebee;
             color: #b71c1c;
+        }
+
+        .hidden-topics {
+            display: none;
         }
 
         .errors {
@@ -313,13 +390,16 @@
         }
 
         .meta-info {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #999;
             margin-top: 5px;
         }
 
         @media (max-width: 768px) {
             .mermaid-row {
+                grid-template-columns: 1fr;
+            }
+            .topics-list {
                 grid-template-columns: 1fr;
             }
         }
@@ -329,6 +409,13 @@
     <div class="container">
         <h1>Skill Extractor</h1>
         <p class="subtitle">Convert markdown learning materials into structured skill maps</p>
+
+        <div class="difficulty-legend">
+            <strong>Difficulty Levels:</strong>
+            <span class="legend-item"><span class="legend-box beginner"></span> Beginner - Foundational concepts</span>
+            <span class="legend-item"><span class="legend-box intermediate"></span> Intermediate - Requires some background</span>
+            <span class="legend-item"><span class="legend-box advanced"></span> Advanced - Complex or specialized topics</span>
+        </div>
 
         <div class="tabs">
             <button class="tab active" data-mode="preset">Preset Module</button>
@@ -341,6 +428,7 @@
                 <select id="presetSelect">
                     <option value="">-- Select a preset module --</option>
                 </select>
+                <div class="input-hint">Pre-scraped course modules from GeeksforGeeks</div>
             </div>
 
             <div id="pasteMode" class="input-mode">
@@ -348,7 +436,8 @@
             </div>
 
             <div id="urlMode" class="input-mode">
-                <input type="text" id="urlInput" placeholder="Enter URL to fetch (e.g., https://www.geeksforgeeks.org/python-basics/)">
+                <input type="text" id="urlInput" placeholder="Enter URL (e.g., https://www.geeksforgeeks.org/python-basics/)">
+                <div class="input-hint">Works best with static content sites. Some sites may block scraping.</div>
             </div>
         </div>
 
@@ -361,7 +450,6 @@
         <div id="results" class="results">
             <div class="badges">
                 <span id="topicCount" class="badge badge-count">0 topics</span>
-                <span id="diffMix" class="badge badge-diff"></span>
             </div>
 
             <div id="errorsSection" class="errors" style="display: none;">
@@ -370,6 +458,11 @@
             </div>
 
             <h3 class="section-title">Relationship Graphs</h3>
+            <div class="mermaid-legend">
+                <span class="mermaid-legend-item"><span class="mermaid-line prereq"></span> Prerequisite (must learn first)</span>
+                <span class="mermaid-legend-item"><span class="mermaid-line related"></span> Related (connected concepts)</span>
+                <span class="mermaid-legend-item"><span class="mermaid-line subtopic"></span> Subtopic (part of)</span>
+            </div>
             <div class="mermaid-row">
                 <div class="mermaid-wrapper">
                     <div class="mermaid-label">Prerequisites Only</div>
@@ -381,7 +474,7 @@
                 </div>
             </div>
 
-            <h3 class="section-title">Topics</h3>
+            <h3 class="section-title">Topics <button id="showAllBtn" class="btn-text">Show all</button></h3>
             <div id="topicsList" class="topics-list"></div>
 
             <button id="downloadBtn" class="btn-secondary">Download JSON</button>
@@ -391,7 +484,7 @@
 
     <script>
         // Initialize Mermaid
-        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
 
         // DOM elements
         const tabs = document.querySelectorAll('.tab');
@@ -403,17 +496,18 @@
         const spinner = document.getElementById('spinner');
         const results = document.getElementById('results');
         const topicCount = document.getElementById('topicCount');
-        const diffMix = document.getElementById('diffMix');
         const errorsSection = document.getElementById('errorsSection');
         const errorsList = document.getElementById('errorsList');
         const mermaidPrereq = document.getElementById('mermaidPrereq');
         const mermaidFull = document.getElementById('mermaidFull');
         const topicsList = document.getElementById('topicsList');
+        const showAllBtn = document.getElementById('showAllBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const sourceId = document.getElementById('sourceId');
 
         let currentMode = 'preset';
         let currentResult = null;
+        let allTopicsShown = false;
 
         // Tab switching
         tabs.forEach(tab => {
@@ -450,6 +544,14 @@
             if (presetSelect.value) {
                 generateBtn.click();
             }
+        });
+
+        // Show all topics
+        showAllBtn.addEventListener('click', () => {
+            const hiddenTopics = document.querySelectorAll('.hidden-topics');
+            hiddenTopics.forEach(el => el.style.display = 'block');
+            showAllBtn.style.display = 'none';
+            allTopicsShown = true;
         });
 
         // Generate skill map
@@ -506,14 +608,9 @@
         });
 
         function displayResults(data) {
-            // Update badges
+            // Update topic count
             const total = data.topics.length;
-            const beginner = data.topics.filter(t => t.difficulty === 'beginner').length;
-            const intermediate = data.topics.filter(t => t.difficulty === 'intermediate').length;
-            const advanced = data.topics.filter(t => t.difficulty === 'advanced').length;
-
             topicCount.textContent = `${total} topic${total !== 1 ? 's' : ''}`;
-            diffMix.textContent = `${beginner} beginner, ${intermediate} intermediate, ${advanced} advanced`;
 
             // Show errors if any
             if (data.errors && data.errors.length > 0) {
@@ -524,21 +621,30 @@
             }
 
             // Render Mermaid diagrams
+            mermaidPrereq.removeAttribute('data-processed');
+            mermaidFull.removeAttribute('data-processed');
             mermaidPrereq.textContent = data.mermaid_prereq;
             mermaidFull.textContent = data.mermaid_full;
             mermaid.run();
 
-            // Render topics list
-            topicsList.innerHTML = data.topics.map(t => `
-                <div class="topic-card">
-                    <div class="topic-name">${escapeHtml(t.name)}</div>
+            // Reset show all button
+            showAllBtn.style.display = total > 6 ? 'inline-block' : 'none';
+            allTopicsShown = false;
+
+            // Render topics list (show first 6 by default)
+            const visibleCount = Math.min(6, total);
+            topicsList.innerHTML = data.topics.map((t, i) => `
+                <div class="topic-card ${i >= visibleCount ? 'hidden-topics' : ''}" style="display: ${i >= visibleCount ? 'none' : 'block'}">
+                    <div class="topic-header">
+                        <div class="topic-name">${escapeHtml(t.name)}</div>
+                        <span class="topic-diff ${t.difficulty}">${t.difficulty}</span>
+                    </div>
                     <div class="topic-desc">${escapeHtml(t.description)}</div>
-                    <span class="topic-diff ${t.difficulty}">${t.difficulty}</span>
                 </div>
             `).join('');
 
             // Update source ID
-            sourceId.textContent = `Source ID: ${data.source_id} • Input length: ${data.input_length} chars`;
+            sourceId.textContent = `Source ID: ${data.source_id} • Input: ${data.input_length} chars`;
 
             // Show results
             results.classList.add('active');

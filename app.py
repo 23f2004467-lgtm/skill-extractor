@@ -91,24 +91,31 @@ def fetch_url_to_markdown(url: str) -> Optional[str]:
         return None
 
 
-def generate_mermaid_prereq(relationships: list[Relationship]) -> str:
-    """Generate Mermaid graph with only prerequisite edges."""
-    lines = ["graph LR"]
+def generate_mermaid_prereq(relationships: list[Relationship], topics: list[Topic]) -> str:
+    """Generate Mermaid graph with only prerequisite edges using topic names."""
+    # Build a map of topic id to name for readable labels
+    topic_names = {t.id: t.name for t in topics}
+    lines = ["graph TD"]
     for r in relationships:
         if r.type == "prerequisite":
-            lines.append(f"  {r.from_id}[{r.from_id}] --> {r.to_id}[{r.to_id}]")
+            from_name = topic_names.get(r.from_id, r.from_id)
+            to_name = topic_names.get(r.to_id, r.to_id)
+            # Use topic names as labels, IDs as node references
+            lines.append(f"  {r.from_id}[\"{from_name}\"] --> {r.to_id}[\"{to_name}\"]")
     return "\n".join(lines)
 
 
-def generate_mermaid_full(relationships: list[Relationship]) -> str:
-    """Generate Mermaid graph with all edges, colored by type."""
+def generate_mermaid_full(relationships: list[Relationship], topics: list[Topic]) -> str:
+    """Generate Mermaid graph with all edges, colored by type, using topic names."""
+    # Build a map of topic id to name for readable labels
+    topic_names = {t.id: t.name for t in topics}
     lines = ["graph TD"]
 
     # Define styles
     styles = [
-        "    classDef prereqStyle stroke:#ff9800,stroke-width:2px;",
-        "    classDef relatedStyle stroke:#2196f3,stroke-width:2px,stroke-dasharray: 5 5;",
-        "    classDef subtopicStyle stroke:#4caf50,stroke-width:2px,stroke-dasharray: 10 5;",
+        "    classDef prereqStyle stroke:#ff9800,stroke-width:2px,fill:#fff3e0;",
+        "    classDef relatedStyle stroke:#2196f3,stroke-width:2px,stroke-dasharray: 5 5,fill:#e3f2fd;",
+        "    classDef subtopicStyle stroke:#4caf50,stroke-width:2px,stroke-dasharray: 10 5,fill:#e8f5e9;",
     ]
 
     prereq_nodes = []
@@ -116,14 +123,17 @@ def generate_mermaid_full(relationships: list[Relationship]) -> str:
     subtopic_nodes = []
 
     for r in relationships:
+        from_name = topic_names.get(r.from_id, r.from_id)
+        to_name = topic_names.get(r.to_id, r.to_id)
+
         if r.type == "prerequisite":
-            lines.append(f"  {r.from_id}[{r.from_id}] --> {r.to_id}[{r.to_id}]")
+            lines.append(f"  {r.from_id}[\"{from_name}\"] --> {r.to_id}[\"{to_name}\"]")
             prereq_nodes.extend([r.from_id, r.to_id])
         elif r.type == "related":
-            lines.append(f"  {r.from_id}[{r.from_id}] --- {r.to_id}[{r.to_id}]")
+            lines.append(f"  {r.from_id}[\"{from_name}\"] -.-> {r.to_id}[\"{to_name}\"]")
             related_nodes.extend([r.from_id, r.to_id])
         elif r.type == "subtopic":
-            lines.append(f"  {r.from_id}[{r.from_id}] -.- {r.to_id}[{r.to_id}]")
+            lines.append(f"  {r.from_id}[\"{from_name}\"] ==> {r.to_id}[\"{to_name}\"]")
             subtopic_nodes.extend([r.from_id, r.to_id])
 
     # Apply styles
@@ -245,9 +255,9 @@ def process() -> dict:
             + "\n\nPlease fix these and try again."
         )
 
-    # 5. Generate Mermaid diagrams
-    mermaid_prereq = generate_mermaid_prereq(relationships)
-    mermaid_full = generate_mermaid_full(relationships)
+    # 5. Generate Mermaid diagrams (pass topics for readable names)
+    mermaid_prereq = generate_mermaid_prereq(relationships, topics)
+    mermaid_full = generate_mermaid_full(relationships, topics)
 
     return jsonify({
         "topics": serialize_topics(topics),
