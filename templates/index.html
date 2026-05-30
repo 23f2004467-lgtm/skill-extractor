@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skill Extractor</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -13,86 +13,73 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
             color: #333;
-            background: #f5f5f5;
+            background: #f5f7fa;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
             background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 32px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
         }
 
         h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            color: #1a1a1a;
+            font-size: 1.6rem;
+            color: #111;
+            margin-bottom: 4px;
         }
 
         .subtitle {
             color: #666;
-            margin-bottom: 20px;
             font-size: 0.9rem;
         }
 
-        .difficulty-legend {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 10px 15px;
-            background: #f9f9f9;
-            border-radius: 4px;
-            font-size: 0.8rem;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .legend-box {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-        }
-
-        .legend-box.beginner { background: #1b5e20; }
-        .legend-box.intermediate { background: #e65100; }
-        .legend-box.advanced { background: #b71c1c; }
-
+        /* Tabs */
         .tabs {
             display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
+            background: #f1f3f4;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
         }
 
         .tab {
-            padding: 10px 20px;
-            background: #f0f0f0;
+            flex: 1;
+            padding: 12px;
             border: none;
-            border-radius: 4px 4px 0 0;
+            background: transparent;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: background 0.2s;
+            font-weight: 500;
+            color: #5f6368;
+            transition: all 0.2s;
         }
 
         .tab:hover {
-            background: #e0e0e0;
+            background: #e8eaed;
         }
 
         .tab.active {
-            background: #0066cc;
-            color: #fff;
+            background: #fff;
+            color: #1a73e8;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
+        /* Input sections */
         .input-section {
             margin-bottom: 20px;
         }
@@ -105,51 +92,52 @@
             display: block;
         }
 
+        select, input[type="text"], textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: "Monaco", "Menlo", monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+
         .input-hint {
             font-size: 0.8rem;
             color: #888;
             margin-top: 6px;
         }
 
-        select, input[type="text"] {
-            width: 100%;
-            max-width: 500px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 180px;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
-            font-size: 0.85rem;
-            resize: vertical;
-        }
-
-        select:focus, input:focus, textarea:focus {
-            outline: none;
-            border-color: #0066cc;
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            padding: 12px 24px;
-            background: #0066cc;
+            background: #1a73e8;
             color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
             width: 100%;
-            max-width: 200px;
         }
 
         .btn-primary:hover {
-            background: #0052a3;
+            background: #1557b0;
         }
 
         .btn-primary:disabled {
@@ -158,38 +146,19 @@
         }
 
         .btn-secondary {
-            padding: 8px 16px;
-            background: #f0f0f0;
+            background: #f1f3f4;
             color: #333;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            margin-top: 15px;
         }
 
         .btn-secondary:hover {
-            background: #e0e0e0;
+            background: #e8eaed;
         }
 
-        .btn-text {
-            background: none;
-            border: none;
-            color: #0066cc;
-            cursor: pointer;
-            font-size: 0.85rem;
-            padding: 0;
-            text-decoration: underline;
-        }
-
-        .btn-text:hover {
-            color: #0052a3;
-        }
-
+        /* Spinner */
         .spinner {
             display: none;
             text-align: center;
-            padding: 40px;
+            padding: 32px;
             color: #666;
         }
 
@@ -200,159 +169,187 @@
         .spinner::after {
             content: "";
             display: inline-block;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             border: 3px solid #ddd;
-            border-top-color: #0066cc;
+            border-top-color: #1a73e8;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-left: 10px;
+            margin-left: 8px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
+        /* Results */
         .results {
             display: none;
-            margin-top: 25px;
-            padding-top: 25px;
-            border-top: 1px solid #eee;
+            margin-top: 28px;
         }
 
         .results.active {
             display: block;
         }
 
-        .badges {
+        .results-header {
             display: flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
             flex-wrap: wrap;
-            margin-bottom: 15px;
+            gap: 12px;
         }
 
-        .badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 500;
+        .results-header h2 {
+            font-size: 1.2rem;
+            color: #111;
         }
 
-        .badge-count {
-            background: #0066cc;
+        .topic-count {
+            background: #1a73e8;
             color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        /* Graph section */
+        .graph-section {
+            margin-bottom: 20px;
+        }
+
+        .graph-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .graph-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .graph-legend {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .legend-line.prereq { background: #ff9800; }
+        .legend-line.related { background: #2196f3; }
+        .legend-line.subtopic { background: #4caf50; }
+
+        #networkGraph {
+            height: 450px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .graph-hint {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Stats */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            padding: 14px 18px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .stat-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .stat-dot.beginner { background: #4caf50; }
+        .stat-dot.intermediate { background: #ff9800; }
+        .stat-dot.advanced { background: #f44336; }
+
+        /* Topics grid */
+        .topics-section {
+            margin-bottom: 20px;
         }
 
         .section-title {
             font-size: 1rem;
             font-weight: 600;
-            margin-bottom: 10px;
-            margin-top: 20px;
-            color: #1a1a1a;
+            color: #333;
+            margin-bottom: 12px;
         }
 
-        .section-title:first-child {
-            margin-top: 0;
-        }
-
-        .mermaid-legend {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-            font-size: 0.75rem;
-            color: #666;
-        }
-
-        .mermaid-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .mermaid-line {
-            width: 20px;
-            height: 2px;
-        }
-
-        .mermaid-line.prereq { background: #ff9800; }
-        .mermaid-line.related { background: #2196f3; border-top: 2px dashed #2196f3; height: 0; }
-        .mermaid-line.subtopic { background: #4caf50; border-top: 2px dotted #4caf50; height: 0; }
-
-        .mermaid-container {
-            background: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 15px;
-            overflow-x: auto;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .mermaid-row {
+        .topics-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .mermaid-wrapper {
-            background: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            padding: 15px;
-        }
-
-        .mermaid-label {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .topics-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
         }
 
         .topic-card {
-            background: #f9f9f9;
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid #eee;
+            background: #fff;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
         }
 
         .topic-header {
             display: flex;
             justify-content: space-between;
-            align-items: start;
-            margin-bottom: 6px;
+            align-items: flex-start;
+            margin-bottom: 8px;
         }
 
         .topic-name {
-            font-weight: 600;
-            font-size: 0.9rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #111;
         }
 
         .topic-desc {
-            font-size: 0.8rem;
-            color: #555;
-            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #666;
             line-height: 1.4;
+            margin-bottom: 10px;
         }
 
         .topic-diff {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
             font-weight: 500;
         }
 
         .topic-diff.beginner {
-            background: #e3f9e5;
-            color: #1b5e20;
+            background: #e8f5e9;
+            color: #2e7d32;
         }
 
         .topic-diff.intermediate {
@@ -362,25 +359,47 @@
 
         .topic-diff.advanced {
             background: #ffebee;
-            color: #b71c1c;
+            color: #c62828;
         }
 
+        /* Hidden topics */
         .hidden-topics {
             display: none;
         }
 
+        /* Toggle button */
+        .toggle-topics {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            background: #fff;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            color: #666;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-topics:hover {
+            background: #f8f9fa;
+            border-color: #999;
+        }
+
+        /* Errors */
         .errors {
             background: #ffebee;
             border: 1px solid #ffcdd2;
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 15px;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 20px;
         }
 
         .errors-title {
             font-weight: 600;
             color: #c62828;
             margin-bottom: 8px;
+            font-size: 0.9rem;
         }
 
         .error-item {
@@ -389,141 +408,136 @@
             margin-bottom: 4px;
         }
 
+        /* Meta info */
         .meta-info {
+            text-align: center;
             font-size: 0.75rem;
             color: #999;
-            margin-top: 5px;
+            margin-top: 8px;
         }
 
-        @media (max-width: 768px) {
-            .mermaid-row {
-                grid-template-columns: 1fr;
-            }
-            .topics-list {
-                grid-template-columns: 1fr;
-            }
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            color: #888;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Skill Extractor</h1>
-        <p class="subtitle">Convert markdown learning materials into structured skill maps</p>
-
-        <div class="difficulty-legend">
-            <strong>Difficulty Levels:</strong>
-            <span class="legend-item"><span class="legend-box beginner"></span> Beginner - Foundational concepts</span>
-            <span class="legend-item"><span class="legend-box intermediate"></span> Intermediate - Requires some background</span>
-            <span class="legend-item"><span class="legend-box advanced"></span> Advanced - Complex or specialized topics</span>
+        <div class="header">
+            <h1>Skill Extractor</h1>
+            <p class="subtitle">Transform learning materials into interactive skill maps</p>
         </div>
 
         <div class="tabs">
-            <button class="tab active" data-mode="preset">Preset Module</button>
+            <button class="tab active" data-mode="preset">Preset Modules</button>
             <button class="tab" data-mode="paste">Paste Markdown</button>
-            <button class="tab" data-mode="url">Fetch from URL</button>
         </div>
 
         <div class="input-section">
             <div id="presetMode" class="input-mode active">
                 <select id="presetSelect">
-                    <option value="">-- Select a preset module --</option>
+                    <option value="">Select a module...</option>
                 </select>
-                <div class="input-hint">Pre-scraped course modules from GeeksforGeeks</div>
+                <div class="input-hint">Pre-scraped course modules (works offline)</div>
             </div>
 
             <div id="pasteMode" class="input-mode">
                 <textarea id="markdownInput" placeholder="Paste your markdown content here..."></textarea>
-            </div>
-
-            <div id="urlMode" class="input-mode">
-                <input type="text" id="urlInput" placeholder="Enter URL (e.g., https://www.geeksforgeeks.org/python-basics/)">
-                <div class="input-hint">Works best with static content sites. Some sites may block scraping.</div>
+                <div class="input-hint">Paste any learning content to extract topics and relationships</div>
             </div>
         </div>
 
-        <button id="generateBtn" class="btn-primary">Generate Skill Map</button>
+        <button id="generateBtn" class="btn btn-primary">Generate Skill Map</button>
 
         <div id="spinner" class="spinner">
             Processing<span></span>
         </div>
 
         <div id="results" class="results">
-            <div class="badges">
-                <span id="topicCount" class="badge badge-count">0 topics</span>
+            <div class="results-header">
+                <h2>Learning Path</h2>
+                <span id="topicCount" class="topic-count">0 topics</span>
             </div>
 
             <div id="errorsSection" class="errors" style="display: none;">
-                <div class="errors-title">Validation Errors</div>
+                <div class="errors-title">Issues Found</div>
                 <div id="errorsList"></div>
             </div>
 
-            <h3 class="section-title">Relationship Graphs</h3>
-            <div class="mermaid-legend">
-                <span class="mermaid-legend-item"><span class="mermaid-line prereq"></span> Prerequisite (must learn first)</span>
-                <span class="mermaid-legend-item"><span class="mermaid-line related"></span> Related (connected concepts)</span>
-                <span class="mermaid-legend-item"><span class="mermaid-line subtopic"></span> Subtopic (part of)</span>
-            </div>
-            <div class="mermaid-row">
-                <div class="mermaid-wrapper">
-                    <div class="mermaid-label">Prerequisites Only</div>
-                    <div id="mermaidPrereq" class="mermaid"></div>
-                </div>
-                <div class="mermaid-wrapper">
-                    <div class="mermaid-label">All Relationships (Colored)</div>
-                    <div id="mermaidFull" class="mermaid"></div>
-                </div>
+            <!-- Stats -->
+            <div class="stats-bar" id="statsBar" style="display: none;">
+                <div class="stat-item"><span class="stat-dot beginner"></span> <span id="beginnerCount">0</span> Beginner</div>
+                <div class="stat-item"><span class="stat-dot intermediate"></span> <span id="intermediateCount">0</span> Intermediate</div>
+                <div class="stat-item"><span class="stat-dot advanced"></span> <span id="advancedCount">0</span> Advanced</div>
             </div>
 
-            <h3 class="section-title">Topics <button id="showAllBtn" class="btn-text">Show all</button></h3>
-            <div id="topicsList" class="topics-list"></div>
+            <!-- Network Graph -->
+            <div class="graph-section">
+                <div class="graph-header">
+                    <div class="graph-title">Interactive Relationship Graph</div>
+                    <div class="graph-legend">
+                        <span class="legend-item"><span class="legend-line prereq"></span> Prerequisite</span>
+                        <span class="legend-item"><span class="legend-line related"></span> Related</span>
+                        <span class="legend-item"><span class="legend-line subtopic"></span> Subtopic</span>
+                    </div>
+                </div>
+                <div id="networkGraph"></div>
+                <div class="graph-hint">💡 Drag nodes to rearrange • Scroll to zoom • Click a node to highlight connections</div>
+            </div>
 
-            <button id="downloadBtn" class="btn-secondary">Download JSON</button>
+            <!-- Topics Grid -->
+            <div class="topics-section">
+                <div class="section-title">All Topics</div>
+                <div id="topicsList" class="topics-grid"></div>
+                <button id="toggleTopics" class="toggle-topics" style="display: none;">Show More</button>
+            </div>
+
+            <button id="downloadBtn" class="btn btn-secondary">Download JSON</button>
             <div id="sourceId" class="meta-info"></div>
         </div>
     </div>
 
     <script>
-        // Initialize Mermaid
-        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
-
         // DOM elements
         const tabs = document.querySelectorAll('.tab');
         const inputModes = document.querySelectorAll('.input-mode');
         const presetSelect = document.getElementById('presetSelect');
         const markdownInput = document.getElementById('markdownInput');
-        const urlInput = document.getElementById('urlInput');
         const generateBtn = document.getElementById('generateBtn');
         const spinner = document.getElementById('spinner');
         const results = document.getElementById('results');
         const topicCount = document.getElementById('topicCount');
         const errorsSection = document.getElementById('errorsSection');
         const errorsList = document.getElementById('errorsList');
-        const mermaidPrereq = document.getElementById('mermaidPrereq');
-        const mermaidFull = document.getElementById('mermaidFull');
+        const statsBar = document.getElementById('statsBar');
+        const networkGraph = document.getElementById('networkGraph');
         const topicsList = document.getElementById('topicsList');
-        const showAllBtn = document.getElementById('showAllBtn');
+        const toggleTopics = document.getElementById('toggleTopics');
         const downloadBtn = document.getElementById('downloadBtn');
         const sourceId = document.getElementById('sourceId');
 
         let currentMode = 'preset';
         let currentResult = null;
         let allTopicsShown = false;
+        let network = null;
+        const TOPICS_PER_PAGE = 8;
 
         // Tab switching
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                const mode = tab.dataset.mode;
-                currentMode = mode;
-
+                currentMode = tab.dataset.mode;
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-
                 inputModes.forEach(m => m.classList.remove('active'));
-                document.getElementById(mode + 'Mode').classList.add('active');
+                document.getElementById(currentMode + 'Mode').classList.add('active');
             });
         });
 
-        // Load available presets
+        // Load presets
         async function loadPresets() {
             try {
                 const resp = await fetch('/samples');
@@ -539,22 +553,30 @@
             }
         }
 
-        // Handle preset selection
+        // Preset selection
         presetSelect.addEventListener('change', () => {
             if (presetSelect.value) {
                 generateBtn.click();
             }
         });
 
-        // Show all topics
-        showAllBtn.addEventListener('click', () => {
+        // Toggle topics
+        toggleTopics.addEventListener('click', () => {
             const hiddenTopics = document.querySelectorAll('.hidden-topics');
-            hiddenTopics.forEach(el => el.style.display = 'block');
-            showAllBtn.style.display = 'none';
-            allTopicsShown = true;
+
+            if (!allTopicsShown) {
+                hiddenTopics.forEach(el => el.style.display = 'block');
+                toggleTopics.textContent = 'Show Less';
+                allTopicsShown = true;
+            } else {
+                hiddenTopics.forEach(el => el.style.display = 'none');
+                toggleTopics.textContent = `Show More (${currentResult.topics.length - TOPICS_PER_PAGE} remaining)`;
+                allTopicsShown = false;
+                topicsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         });
 
-        // Generate skill map
+        // Generate
         generateBtn.addEventListener('click', async () => {
             let body = {};
 
@@ -571,16 +593,8 @@
                     return;
                 }
                 body = { markdown };
-            } else if (currentMode === 'url') {
-                const url = urlInput.value.trim();
-                if (!url) {
-                    alert('Please enter a URL');
-                    return;
-                }
-                body = { url };
             }
 
-            // Show loading state
             generateBtn.disabled = true;
             spinner.classList.add('active');
             results.classList.remove('active');
@@ -608,33 +622,42 @@
         });
 
         function displayResults(data) {
-            // Update topic count
             const total = data.topics.length;
             topicCount.textContent = `${total} topic${total !== 1 ? 's' : ''}`;
 
-            // Show errors if any
+            // Errors
             if (data.errors && data.errors.length > 0) {
                 errorsSection.style.display = 'block';
-                errorsList.innerHTML = data.errors.map(e => `<div class="error-item">• ${e}</div>`).join('');
+                if (data.is_demo) {
+                    errorsSection.style.background = '#fff3e0';
+                    errorsSection.style.borderColor = '#ffb74d';
+                    errorsList.innerHTML = `<div class="error-item" style="color:#e65100;">📊 Demo mode: ${data.errors[0]}</div>
+                    <div class="error-item" style="color:#666; font-weight:normal;">Try presets (full results) or paste markdown later</div>`;
+                } else {
+                    errorsList.innerHTML = data.errors.map(e => `<div class="error-item">• ${e}</div>`).join('');
+                }
             } else {
                 errorsSection.style.display = 'none';
             }
 
-            // Render Mermaid diagrams
-            mermaidPrereq.removeAttribute('data-processed');
-            mermaidFull.removeAttribute('data-processed');
-            mermaidPrereq.textContent = data.mermaid_prereq;
-            mermaidFull.textContent = data.mermaid_full;
-            mermaid.run();
+            // Stats
+            const beginner = data.topics.filter(t => t.difficulty === 'beginner').length;
+            const intermediate = data.topics.filter(t => t.difficulty === 'intermediate').length;
+            const advanced = data.topics.filter(t => t.difficulty === 'advanced').length;
+            document.getElementById('beginnerCount').textContent = beginner;
+            document.getElementById('intermediateCount').textContent = intermediate;
+            document.getElementById('advancedCount').textContent = advanced;
+            statsBar.style.display = 'flex';
 
-            // Reset show all button
-            showAllBtn.style.display = total > 6 ? 'inline-block' : 'none';
+            // Build network graph
+            buildNetworkGraph(data);
+
+            // Topics grid
+            const visibleCount = Math.min(TOPICS_PER_PAGE, total);
             allTopicsShown = false;
 
-            // Render topics list (show first 6 by default)
-            const visibleCount = Math.min(6, total);
             topicsList.innerHTML = data.topics.map((t, i) => `
-                <div class="topic-card ${i >= visibleCount ? 'hidden-topics' : ''}" style="display: ${i >= visibleCount ? 'none' : 'block'}">
+                <div class="topic-card ${i >= visibleCount ? 'hidden-topics' : ''}" style="${i >= visibleCount ? 'display:none' : ''}">
                     <div class="topic-header">
                         <div class="topic-name">${escapeHtml(t.name)}</div>
                         <span class="topic-diff ${t.difficulty}">${t.difficulty}</span>
@@ -643,11 +666,119 @@
                 </div>
             `).join('');
 
-            // Update source ID
-            sourceId.textContent = `Source ID: ${data.source_id} • Input: ${data.input_length} chars`;
+            // Toggle button
+            if (total > TOPICS_PER_PAGE) {
+                toggleTopics.style.display = 'block';
+                toggleTopics.textContent = `Show More (${total - TOPICS_PER_PAGE} remaining)`;
+            } else {
+                toggleTopics.style.display = 'none';
+            }
+
+            // Meta info
+            sourceId.textContent = `Source ID: ${data.source_id} • ${data.input_length} characters`;
 
             // Show results
             results.classList.add('active');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function buildNetworkGraph(data) {
+            // Create nodes
+            const nodes = data.topics.map(t => ({
+                id: t.id,
+                label: t.name,
+                title: `${t.name}\n${t.description}\nDifficulty: ${t.difficulty}`,
+                color: getNodeColor(t.difficulty),
+                font: { size: 14, color: '#333' },
+                borderWidth: 2,
+                borderWidthSelected: 3
+            }));
+
+            // Create edges with colors based on type
+            const edges = data.relationships.map(r => ({
+                from: r.from_id,
+                to: r.to_id,
+                title: r.type,
+                arrows: r.type === 'prerequisite' ? 'to' : undefined,
+                dashes: r.type === 'related',
+                color: getEdgeColor(r.type)
+            }));
+
+            // Network config
+            const container = document.getElementById('networkGraph');
+            const networkData = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+
+            const options = {
+                nodes: {
+                    shape: 'box',
+                    margin: 12,
+                    widthConstraint: { maximum: 160 },
+                    font: { size: 14, color: '#333' },
+                    borderWidth: 2,
+                    borderWidthSelected: 3,
+                    shadow: { enabled: true, color: 'rgba(0,0,0,0.15)', size: 6 }
+                },
+                edges: {
+                    smooth: { type: 'continuous', roundness: 0.2 },
+                    width: 2,
+                    shadow: { enabled: true, color: 'rgba(0,0,0,0.1)', size: 3 }
+                },
+                layout: {
+                    randomSeed: 42,
+                    improvedLayout: true
+                },
+                physics: {
+                    enabled: true,
+                    barnesHut: {
+                        gravitationalConstant: -8000,
+                        centralGravity: 0.3,
+                        springLength: 150,
+                        springConstant: 0.04,
+                        damping: 0.09,
+                        avoidOverlap: 0.2
+                    },
+                    maxVelocity: 50,
+                    minVelocity: 0.1,
+                    solver: 'barnesHut',
+                    timestep: 0.5,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 300
+                    }
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 100,
+                    zoomView: true,
+                    dragView: true,
+                    navigationButtons: true
+                }
+            };
+
+            // Destroy existing network
+            if (network) {
+                network.destroy();
+            }
+
+            network = new vis.Network(container, networkData, options);
+        }
+
+        function getNodeColor(difficulty) {
+            switch(difficulty) {
+                case 'beginner': return '#e8f5e9';
+                case 'intermediate': return '#fff3e0';
+                case 'advanced': return '#ffebee';
+                default: return '#f5f5f5';
+            }
+        }
+
+        function getEdgeColor(type) {
+            switch(type) {
+                case 'prerequisite': return '#ff9800';
+                case 'related': return '#2196f3';
+                case 'subtopic': return '#4caf50';
+                default: return '#999';
+            }
         }
 
         function escapeHtml(text) {
@@ -656,7 +787,7 @@
             return div.innerHTML;
         }
 
-        // Download JSON
+        // Download
         downloadBtn.addEventListener('click', () => {
             if (!currentResult) return;
             const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: 'application/json' });
@@ -668,7 +799,7 @@
             URL.revokeObjectURL(url);
         });
 
-        // Initialize
+        // Init
         loadPresets();
     </script>
 </body>

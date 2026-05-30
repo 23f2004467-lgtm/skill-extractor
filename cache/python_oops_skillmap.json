@@ -1,0 +1,25 @@
+{
+  "topics": [
+    {"id": "classes", "name": "Classes", "description": "Blueprints for creating objects with defined properties and methods", "difficulty": "beginner"},
+    {"id": "objects", "name": "Objects", "description": "Instances of classes containing actual data and methods", "difficulty": "beginner"},
+    {"id": "inheritance", "name": "Inheritance", "description": "Creating new classes that inherit properties from existing classes", "difficulty": "intermediate"},
+    {"id": "encapsulation", "name": "Encapsulation", "description": "Bundling data and methods within a class while hiding internal details", "difficulty": "intermediate"},
+    {"id": "polymorphism", "name": "Polymorphism", "description": "Objects taking many forms through method overriding and interfaces", "difficulty": "advanced"},
+    {"id": "abstraction", "name": "Abstraction", "description": "Hiding complex implementation details while exposing only necessary features", "difficulty": "intermediate"},
+    {"id": "attributes", "name": "Attributes", "description": "Variables that belong to a class or object", "difficulty": "beginner"},
+    {"id": "methods", "name": "Methods", "description": "Functions defined within a class that operate on objects", "difficulty": "beginner"}
+  ],
+  "relationships": [
+    {"from_id": "classes", "to_id": "inheritance", "type": "prerequisite"},
+    {"from_id": "classes", "to_id": "encapsulation", "type": "prerequisite"},
+    {"from_id": "classes", "to_id": "abstraction", "type": "prerequisite"},
+    {"from_id": "inheritance", "to_id": "polymorphism", "type": "prerequisite"},
+    {"from_id": "classes", "to_id": "objects", "type": "related"},
+    {"from_id": "classes", "to_id": "attributes", "type": "subtopic"},
+    {"from_id": "classes", "to_id": "methods", "type": "subtopic"}
+  ],
+  "errors": [],
+  "source_id": "python_oops",
+  "input_length": 5743,
+  "from_cache": true
+}

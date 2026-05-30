@@ -1,0 +1,24 @@
+{
+  "topics": [
+    {"id": "http-basics", "name": "HTTP Basics", "description": "Understanding request methods, status codes, and headers", "difficulty": "beginner"},
+    {"id": "rest-api", "name": "REST APIs", "description": "Designing APIs using REST principles with proper endpoints", "difficulty": "intermediate"},
+    {"id": "databases", "name": "Databases", "description": "Storing and retrieving data using SQL and NoSQL databases", "difficulty": "intermediate"},
+    {"id": "authentication", "name": "Authentication", "description": "Verifying user identity using JWT, OAuth, and session management", "difficulty": "intermediate"},
+    {"id": "sql", "name": "SQL", "description": "Querying relational databases with SELECT, JOIN, and aggregations", "difficulty": "beginner"},
+    {"id": "nosql", "name": "NoSQL", "description": "Document databases like MongoDB for flexible schemas", "difficulty": "intermediate"},
+    {"id": "caching", "name": "Caching", "description": "Using Redis to improve performance with frequently accessed data", "difficulty": "advanced"},
+    {"id": "deployment", "name": "Deployment", "description": "Deploying applications using Docker, cloud platforms, and CI/CD", "difficulty": "intermediate"}
+  ],
+  "relationships": [
+    {"from_id": "http-basics", "to_id": "rest-api", "type": "prerequisite"},
+    {"from_id": "sql", "to_id": "databases", "type": "prerequisite"},
+    {"from_id": "rest-api", "to_id": "authentication", "type": "prerequisite"},
+    {"from_id": "databases", "to_id": "caching", "type": "prerequisite"},
+    {"from_id": "http-basics", "to_id": "deployment", "type": "related"},
+    {"from_id": "sql", "to_id": "nosql", "type": "related"}
+  ],
+  "errors": [],
+  "source_id": "backend_roadmap",
+  "input_length": 2765,
+  "from_cache": true
+}

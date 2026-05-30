@@ -1,0 +1,22 @@
+{
+  "topics": [
+    {"id": "node", "name": "Node", "description": "Basic unit containing data and a pointer to the next node", "difficulty": "beginner"},
+    {"id": "head", "name": "Head Pointer", "description": "Pointer to the first node in the linked list", "difficulty": "beginner"},
+    {"id": "traversal", "name": "Traversal", "description": "Process of visiting each node in the list sequentially", "difficulty": "beginner"},
+    {"id": "insertion", "name": "Insertion", "description": "Adding a new node at the beginning, end, or middle of the list", "difficulty": "intermediate"},
+    {"id": "deletion", "name": "Deletion", "description": "Removing a node while maintaining list integrity", "difficulty": "intermediate"},
+    {"id": "doubly-linked", "name": "Doubly Linked List", "description": "Each node has pointers to both next and previous nodes", "difficulty": "intermediate"},
+    {"id": "circular", "name": "Circular Linked List", "description": "Last node points back to the first node", "difficulty": "advanced"}
+  ],
+  "relationships": [
+    {"from_id": "head", "to_id": "traversal", "type": "prerequisite"},
+    {"from_id": "traversal", "to_id": "insertion", "type": "prerequisite"},
+    {"from_id": "traversal", "to_id": "deletion", "type": "prerequisite"},
+    {"from_id": "insertion", "to_id": "doubly-linked", "type": "related"},
+    {"from_id": "doubly-linked", "to_id": "circular", "type": "prerequisite"}
+  ],
+  "errors": [],
+  "source_id": "linked_lists",
+  "input_length": 8240,
+  "from_cache": true
+}

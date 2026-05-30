@@ -1,0 +1,24 @@
+{
+  "topics": [
+    {"id": "useState", "name": "useState", "description": "Hook for adding state to function components", "difficulty": "beginner"},
+    {"id": "useEffect", "name": "useEffect", "description": "Hook for performing side effects in function components", "difficulty": "intermediate"},
+    {"id": "useContext", "name": "useContext", "description": "Hook for consuming context values without nesting", "difficulty": "intermediate"},
+    {"id": "useReducer", "name": "useReducer", "description": "Hook for complex state management with reducer pattern", "difficulty": "intermediate"},
+    {"id": "useCallback", "name": "useCallback", "description": "Hook for memoizing callback functions to prevent re-renders", "difficulty": "advanced"},
+    {"id": "useMemo", "name": "useMemo", "description": "Hook for memoizing expensive calculations", "difficulty": "advanced"},
+    {"id": "useRef", "name": "useRef", "description": "Hook for persisting values without triggering re-renders", "difficulty": "intermediate"},
+    {"id": "custom-hooks", "name": "Custom Hooks", "description": "Creating reusable hooks by combining existing hooks", "difficulty": "advanced"}
+  ],
+  "relationships": [
+    {"from_id": "useState", "to_id": "useEffect", "type": "prerequisite"},
+    {"from_id": "useEffect", "to_id": "useCallback", "type": "prerequisite"},
+    {"from_id": "useEffect", "to_id": "useMemo", "type": "prerequisite"},
+    {"from_id": "useReducer", "to_id": "custom-hooks", "type": "prerequisite"},
+    {"from_id": "useState", "to_id": "useReducer", "type": "related"},
+    {"from_id": "useCallback", "to_id": "useMemo", "type": "related"}
+  ],
+  "errors": [],
+  "source_id": "react_hooks",
+  "input_length": 12624,
+  "from_cache": true
+}

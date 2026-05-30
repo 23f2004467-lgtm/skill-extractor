@@ -1,0 +1,17 @@
+{
+  "topics": [
+    {
+      "id": "demo",
+      "name": "Test",
+      "description": "Demo topic (API rate limited)",
+      "difficulty": "beginner"
+    }
+  ],
+  "relationships": [],
+  "errors": [
+    "Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpre0ywkf7997dz0kvkvjt1f` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99492, Requested 698. Please try again in 2m44.16s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+  ],
+  "source_id": "test",
+  "input_length": 116,
+  "from_cache": true
+}

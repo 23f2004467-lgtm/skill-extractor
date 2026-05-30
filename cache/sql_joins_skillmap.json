@@ -1,0 +1,22 @@
+{
+  "topics": [
+    {"id": "inner-join", "name": "INNER JOIN", "description": "Returns records that have matching values in both tables", "difficulty": "beginner"},
+    {"id": "left-join", "name": "LEFT JOIN", "description": "Returns all records from left table and matched records from right table", "difficulty": "beginner"},
+    {"id": "right-join", "name": "RIGHT JOIN", "description": "Returns all records from right table and matched records from left table", "difficulty": "beginner"},
+    {"id": "full-join", "name": "FULL JOIN", "description": "Returns all records when there is a match in either table", "difficulty": "intermediate"},
+    {"id": "cross-join", "name": "CROSS JOIN", "description": "Cartesian product of the two tables", "difficulty": "intermediate"},
+    {"id": "self-join", "name": "Self Join", "description": "Joining a table to itself to compare rows within the same table", "difficulty": "advanced"}
+  ],
+  "relationships": [
+    {"from_id": "inner-join", "to_id": "left-join", "type": "prerequisite"},
+    {"from_id": "inner-join", "to_id": "right-join", "type": "prerequisite"},
+    {"from_id": "left-join", "to_id": "full-join", "type": "prerequisite"},
+    {"from_id": "right-join", "to_id": "full-join", "type": "prerequisite"},
+    {"from_id": "inner-join", "to_id": "cross-join", "type": "related"},
+    {"from_id": "full-join", "to_id": "self-join", "type": "related"}
+  ],
+  "errors": [],
+  "source_id": "sql_joins",
+  "input_length": 1574,
+  "from_cache": true
+}

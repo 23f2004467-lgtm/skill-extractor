@@ -1,0 +1,24 @@
+{
+  "topics": [
+    {"id": "components", "name": "Components", "description": "Reusable building blocks of React UIs", "difficulty": "beginner"},
+    {"id": "jsx", "name": "JSX", "description": "Syntax extension that looks like HTML but writes in JavaScript", "difficulty": "beginner"},
+    {"id": "props", "name": "Props", "description": "Passing data between components", "difficulty": "beginner"},
+    {"id": "state", "name": "State", "description": "Data that changes over time within a component", "difficulty": "intermediate"},
+    {"id": "lifecycle", "name": "Lifecycle Methods", "description": "Methods that run at different points in a component's life", "difficulty": "intermediate"},
+    {"id": "hooks", "name": "React Hooks", "description": "Functions for using state and other features in function components", "difficulty": "intermediate"},
+    {"id": "events", "name": "Event Handling", "description": "Responding to user interactions like clicks and form submissions", "difficulty": "beginner"}
+  ],
+  "relationships": [
+    {"from_id": "jsx", "to_id": "components", "type": "prerequisite"},
+    {"from_id": "components", "to_id": "props", "type": "prerequisite"},
+    {"from_id": "components", "to_id": "state", "type": "prerequisite"},
+    {"from_id": "components", "to_id": "lifecycle", "type": "prerequisite"},
+    {"from_id": "state", "to_id": "hooks", "type": "prerequisite"},
+    {"from_id": "components", "to_id": "events", "type": "related"},
+    {"from_id": "lifecycle", "to_id": "hooks", "type": "related"}
+  ],
+  "errors": [],
+  "source_id": "react_intro",
+  "input_length": 3439,
+  "from_cache": true
+}
