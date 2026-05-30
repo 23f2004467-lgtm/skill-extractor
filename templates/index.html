@@ -185,7 +185,11 @@
         /* Results */
         .results {
             display: none;
-            margin-top: 28px;
+            margin-top: 24px;
+        }
+
+        .results.active {
+            display: block;
         }
 
         .results.active {
@@ -255,10 +259,12 @@
         .legend-line.subtopic { background: #4caf50; }
 
         #networkGraph {
-            height: 380px;
+            height: 500px;
+            width: 100%;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             background: #fafafa;
+            position: relative;
         }
 
         /* Stats */
