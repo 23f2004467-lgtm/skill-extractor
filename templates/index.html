@@ -255,17 +255,10 @@
         .legend-line.subtopic { background: #4caf50; }
 
         #networkGraph {
-            height: 450px;
+            height: 380px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             background: #fafafa;
-        }
-
-        .graph-hint {
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 8px;
-            text-align: center;
         }
 
         /* Stats */
@@ -486,7 +479,6 @@
                     </div>
                 </div>
                 <div id="networkGraph"></div>
-                <div class="graph-hint">💡 Drag nodes to rearrange • Scroll to zoom • Click a node to highlight connections</div>
             </div>
 
             <!-- Topics Grid -->
@@ -711,47 +703,34 @@
             const options = {
                 nodes: {
                     shape: 'box',
-                    margin: 12,
-                    widthConstraint: { maximum: 160 },
-                    font: { size: 14, color: '#333' },
+                    margin: 10,
+                    widthConstraint: { maximum: 140 },
+                    font: { size: 13, color: '#333' },
                     borderWidth: 2,
-                    borderWidthSelected: 3,
-                    shadow: { enabled: true, color: 'rgba(0,0,0,0.15)', size: 6 }
+                    shadow: { enabled: false }
                 },
                 edges: {
                     smooth: { type: 'continuous', roundness: 0.2 },
                     width: 2,
-                    shadow: { enabled: true, color: 'rgba(0,0,0,0.1)', size: 3 }
+                    shadow: { enabled: false }
                 },
                 layout: {
                     randomSeed: 42,
-                    improvedLayout: true
+                    improvedLayout: true,
+                    hierarchical: {
+                        enabled: false
+                    }
                 },
                 physics: {
-                    enabled: true,
-                    barnesHut: {
-                        gravitationalConstant: -8000,
-                        centralGravity: 0.3,
-                        springLength: 150,
-                        springConstant: 0.04,
-                        damping: 0.09,
-                        avoidOverlap: 0.2
-                    },
-                    maxVelocity: 50,
-                    minVelocity: 0.1,
-                    solver: 'barnesHut',
-                    timestep: 0.5,
-                    stabilization: {
-                        enabled: true,
-                        iterations: 300
-                    }
+                    enabled: false
                 },
                 interaction: {
                     hover: true,
                     tooltipDelay: 100,
-                    zoomView: true,
-                    dragView: true,
-                    navigationButtons: true
+                    zoomView: false,
+                    dragView: false,
+                    navigationButtons: false,
+                    dragNodes: false
                 }
             };
 
