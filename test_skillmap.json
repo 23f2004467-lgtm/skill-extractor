@@ -1,0 +1,86 @@
+{
+  "topics": [
+    {
+      "id": "python-basics",
+      "name": "Python Basics",
+      "description": "Learn the fundamental concepts of Python programming",
+      "difficulty": "beginner"
+    },
+    {
+      "id": "variables",
+      "name": "Variables",
+      "description": "Learn how to declare and use variables in Python",
+      "difficulty": "beginner"
+    },
+    {
+      "id": "loops",
+      "name": "Loops",
+      "description": "Learn how to use loops to control the flow of your Python program",
+      "difficulty": "beginner"
+    },
+    {
+      "id": "functions",
+      "name": "Functions",
+      "description": "Learn how to define and use reusable functions in Python",
+      "difficulty": "beginner"
+    },
+    {
+      "id": "data-structures",
+      "name": "Data Structures",
+      "description": "Lists, dictionaries, sets, and tuples are types of data structures.",
+      "difficulty": "beginner"
+    }
+  ],
+  "relationships": [
+    {
+      "from_id": "python-basics",
+      "to_id": "variables",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "python-basics",
+      "to_id": "loops",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "python-basics",
+      "to_id": "functions",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "python-basics",
+      "to_id": "data-structures",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "variables",
+      "to_id": "loops",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "variables",
+      "to_id": "functions",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "variables",
+      "to_id": "data-structures",
+      "type": "prerequisite"
+    },
+    {
+      "from_id": "loops",
+      "to_id": "functions",
+      "type": "related"
+    },
+    {
+      "from_id": "loops",
+      "to_id": "data-structures",
+      "type": "related"
+    },
+    {
+      "from_id": "functions",
+      "to_id": "data-structures",
+      "type": "related"
+    }
+  ]
+}

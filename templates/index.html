@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Extractor</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .input-modes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .mode-option input[type="radio"] {
+            accent-color: #0066cc;
+        }
+
+        .mode-option label {
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        #presetSection {
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        #presetSelect {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-btn {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .file-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .btn-primary {
+            padding: 12px 24px;
+            background: #0066cc;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #0052a3;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner.active {
+            display: block;
+        }
+
+        .spinner::after {
+            content: "";
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #ddd;
+            border-top-color: #0066cc;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .topic-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #0066cc;
+            color: #fff;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            margin-top: 20px;
+            color: #1a1a1a;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .mermaid-container {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+
+        .topics-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .topic-card {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+
+        .topic-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .topic-desc {
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .topic-diff {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .topic-diff.beginner {
+            background: #e3f9e5;
+            color: #1b5e20;
+        }
+
+        .topic-diff.intermediate {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .topic-diff.advanced {
+            background: #ffebee;
+            color: #b71c1c;
+        }
+
+        .errors {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .errors-title {
+            font-weight: 600;
+            color: #c62828;
+            margin-bottom: 8px;
+        }
+
+        .error-item {
+            font-size: 0.85rem;
+            color: #b71c1c;
+            margin-bottom: 4px;
+        }
+
+        .meta-info {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Skill Extractor</h1>
+        <p class="subtitle">Convert markdown learning materials into structured skill maps</p>
+
+        <div class="input-modes">
+            <div class="mode-option">
+                <input type="radio" id="pasteMode" name="inputMode" value="paste" checked>
+                <label for="pasteMode">Paste text</label>
+            </div>
+            <div class="mode-option">
+                <input type="radio" id="uploadMode" name="inputMode" value="upload">
+                <label for="uploadMode">Upload file</label>
+            </div>
+            <div class="mode-option">
+                <input type="radio" id="presetMode" name="inputMode" value="preset">
+                <label for="presetMode">Preset module</label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div id="presetSection">
+                <select id="presetSelect">
+                    <option value="">-- Select a preset --</option>
+                </select>
+            </div>
+
+            <div id="uploadSection" class="file-input-wrapper" style="display: none;">
+                <input type="file" id="fileInput" accept=".md,.txt">
+                <button type="button" class="file-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose .md file
+                </button>
+                <span id="fileName" class="file-name"></span>
+            </div>
+
+            <textarea id="markdownInput" placeholder="Paste your markdown content here..."></textarea>
+        </div>
+
+        <button id="generateBtn" class="btn-primary">Generate Skill Map</button>
+
+        <div id="spinner" class="spinner">
+            Processing your markdown<span></span>
+        </div>
+
+        <div id="results" class="results">
+            <span id="topicCount" class="topic-badge">0 topics</span>
+
+            <div id="errorsSection" class="errors" style="display: none;">
+                <div class="errors-title">Validation Errors</div>
+                <div id="errorsList"></div>
+            </div>
+
+            <h3 class="section-title">Prerequisite Chain</h3>
+            <div class="mermaid-container">
+                <div id="mermaidPrereq" class="mermaid"></div>
+            </div>
+
+            <h3 class="section-title">Full Relationship Graph</h3>
+            <div class="mermaid-container">
+                <div id="mermaidFull" class="mermaid"></div>
+            </div>
+
+            <h3 class="section-title">Topics</h3>
+            <div id="topicsList" class="topics-list"></div>
+
+            <button id="downloadBtn" class="btn-secondary">Download JSON</button>
+            <div id="sourceId" class="meta-info"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+        // DOM elements
+        const pasteMode = document.getElementById('pasteMode');
+        const uploadMode = document.getElementById('uploadMode');
+        const presetMode = document.getElementById('presetMode');
+        const presetSection = document.getElementById('presetSection');
+        const uploadSection = document.getElementById('uploadSection');
+        const presetSelect = document.getElementById('presetSelect');
+        const markdownInput = document.getElementById('markdownInput');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const generateBtn = document.getElementById('generateBtn');
+        const spinner = document.getElementById('spinner');
+        const results = document.getElementById('results');
+        const topicCount = document.getElementById('topicCount');
+        const errorsSection = document.getElementById('errorsSection');
+        const errorsList = document.getElementById('errorsList');
+        const mermaidPrereq = document.getElementById('mermaidPrereq');
+        const mermaidFull = document.getElementById('mermaidFull');
+        const topicsList = document.getElementById('topicsList');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const sourceId = document.getElementById('sourceId');
+
+        let currentResult = null;
+
+        // Load available presets
+        async function loadPresets() {
+            try {
+                const resp = await fetch('/samples');
+                const data = await resp.json();
+                data.samples.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    presetSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load presets:', e);
+            }
+        }
+
+        // Handle input mode changes
+        function setMode(mode) {
+            presetSection.style.display = mode === 'preset' ? 'block' : 'none';
+            uploadSection.style.display = mode === 'upload' ? 'flex' : 'none';
+            markdownInput.style.display = mode === 'upload' ? 'none' : 'block';
+
+            if (mode === 'preset') {
+                markdownInput.value = '';
+            }
+        }
+
+        pasteMode.addEventListener('change', () => setMode('paste'));
+        uploadMode.addEventListener('change', () => setMode('upload'));
+        presetMode.addEventListener('change', () => setMode('preset'));
+
+        // Handle file upload
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    markdownInput.value = ev.target.result;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Handle preset selection
+        presetSelect.addEventListener('change', async () => {
+            if (presetSelect.value) {
+                generateBtn.click();
+            }
+        });
+
+        // Generate skill map
+        generateBtn.addEventListener('click', async () => {
+            const markdown = markdownInput.value.trim();
+            const sample = presetSelect.value;
+
+            if (!markdown && !sample) {
+                alert('Please enter markdown text or select a preset');
+                return;
+            }
+
+            // Show loading state
+            generateBtn.disabled = true;
+            spinner.classList.add('active');
+            results.classList.remove('active');
+
+            try {
+                const body = sample ? { sample } : { markdown };
+                const resp = await fetch('/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.error || 'Processing failed');
+                }
+
+                currentResult = await resp.json();
+                displayResults(currentResult);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                generateBtn.disabled = false;
+                spinner.classList.remove('active');
+            }
+        });
+
+        function displayResults(data) {
+            // Update topic count
+            topicCount.textContent = `${data.topics.length} topic${data.topics.length !== 1 ? 's' : ''}`;
+
+            // Show errors if any
+            if (data.errors && data.errors.length > 0) {
+                errorsSection.style.display = 'block';
+                errorsList.innerHTML = data.errors.map(e => `<div class="error-item">• ${e}</div>`).join('');
+            } else {
+                errorsSection.style.display = 'none';
+            }
+
+            // Render Mermaid diagrams
+            mermaidPrereq.textContent = data.mermaid_prereq;
+            mermaidFull.textContent = data.mermaid_full;
+            mermaid.run();
+
+            // Render topics list
+            topicsList.innerHTML = data.topics.map(t => `
+                <div class="topic-card">
+                    <div class="topic-name">${escapeHtml(t.name)}</div>
+                    <div class="topic-desc">${escapeHtml(t.description)}</div>
+                    <span class="topic-diff ${t.difficulty}">${t.difficulty}</span>
+                </div>
+            `).join('');
+
+            // Update source ID
+            sourceId.textContent = `Source ID: ${data.source_id}`;
+
+            // Show results
+            results.classList.add('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Download JSON
+        downloadBtn.addEventListener('click', () => {
+            if (!currentResult) return;
+            const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `skillmap_${currentResult.source_id}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Initialize
+        loadPresets();
+    </script>
+</body>
+</html>
