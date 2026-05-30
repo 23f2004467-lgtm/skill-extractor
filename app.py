@@ -11,7 +11,10 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from flask import Flask, jsonify, render_template, request
+from markdownify import markdownify as md
 
 # Import from the existing pipeline (don't modify skill_extractor.py)
 import skill_extractor
@@ -34,13 +37,58 @@ deduplicate_topics = skill_extractor.deduplicate_topics
 find_relationships = skill_extractor.find_relationships
 validate = skill_extractor.validate
 
+# Fetching configuration
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+CONTENT_SELECTORS = ["article", ".text", ".content", "main", ".article-content"]
+TAGS_TO_STRIP = ["nav", "footer", "script", "style", "noscript", "iframe", "aside"]
+
 
 def get_sample_files() -> list[str]:
-    """Return list of available preset sample names from samples/*.md"""
+    """Return list of available preset sample names from samples/*.md (sorted)."""
     samples_dir = Path(__file__).parent / "samples"
     if not samples_dir.exists():
         return []
-    return [f.stem for f in samples_dir.glob("*.md")]
+    return sorted([f.stem for f in samples_dir.glob("*.md")])
+
+
+def fetch_url_to_markdown(url: str) -> Optional[str]:
+    """Fetch a URL and convert to markdown, or None if it fails."""
+    try:
+        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=15)
+        resp.raise_for_status()
+        html = resp.text
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Strip out unwanted tags
+        for tag in TAGS_TO_STRIP:
+            for element in soup.find_all(tag):
+                element.decompose()
+
+        # Try each selector
+        article_html = None
+        for selector in CONTENT_SELECTORS:
+            element = soup.select_one(selector)
+            if element:
+                article_html = str(element)
+                break
+
+        # Fallback to body
+        if article_html is None:
+            body = soup.find("body")
+            if body:
+                article_html = str(body)
+            else:
+                return None
+
+        markdown = md(article_html, heading_style="ATX")
+        if len(markdown.strip()) < 50:
+            return None
+
+        return markdown
+    except Exception as e:
+        print(f"Failed to fetch {url}: {e}")
+        return None
 
 
 def generate_mermaid_prereq(relationships: list[Relationship]) -> str:
@@ -55,36 +103,32 @@ def generate_mermaid_prereq(relationships: list[Relationship]) -> str:
 def generate_mermaid_full(relationships: list[Relationship]) -> str:
     """Generate Mermaid graph with all edges, colored by type."""
     lines = ["graph TD"]
-    # Define styles for each relationship type
+
+    # Define styles
     styles = [
-        "    classDef prereqStyle stroke:#0f0,stroke-width:2px;",
-        "    classDef relatedStyle stroke:#00f,stroke-width:2px,stroke-dasharray: 5 5;",
-        "    classDef subtopicStyle stroke:#f00,stroke-width:2px,stroke-dasharray: 10 5;",
+        "    classDef prereqStyle stroke:#ff9800,stroke-width:2px;",
+        "    classDef relatedStyle stroke:#2196f3,stroke-width:2px,stroke-dasharray: 5 5;",
+        "    classDef subtopicStyle stroke:#4caf50,stroke-width:2px,stroke-dasharray: 10 5;",
     ]
-    edge_classes = []
+
+    prereq_nodes = []
+    related_nodes = []
+    subtopic_nodes = []
 
     for r in relationships:
         if r.type == "prerequisite":
             lines.append(f"  {r.from_id}[{r.from_id}] --> {r.to_id}[{r.to_id}]")
-            edge_classes.extend([r.from_id, r.to_id])
+            prereq_nodes.extend([r.from_id, r.to_id])
         elif r.type == "related":
-            lines.append(f"  {r.from_id}[{r.from_id}] -.-> {r.to_id}[{r.to_id}]")
-            edge_classes.extend([r.from_id, r.to_id])
+            lines.append(f"  {r.from_id}[{r.from_id}] --- {r.to_id}[{r.to_id}]")
+            related_nodes.extend([r.from_id, r.to_id])
         elif r.type == "subtopic":
-            lines.append(f"  {r.from_id}[{r.from_id}] ==> {r.to_id}[{r.to_id}]")
-            edge_classes.extend([r.from_id, r.to_id])
+            lines.append(f"  {r.from_id}[{r.from_id}] -.- {r.to_id}[{r.to_id}]")
+            subtopic_nodes.extend([r.from_id, r.to_id])
 
-    # Apply styles to all nodes that have edges
-    if edge_classes:
+    # Apply styles
+    if prereq_nodes or related_nodes or subtopic_nodes:
         lines.extend(styles)
-        unique_nodes = list(set(edge_classes))
-        prereq_nodes = [r.from_id for r in relationships if r.type == "prerequisite"] + \
-                       [r.to_id for r in relationships if r.type == "prerequisite"]
-        related_nodes = [r.from_id for r in relationships if r.type == "related"] + \
-                        [r.to_id for r in relationships if r.type == "related"]
-        subtopic_nodes = [r.from_id for r in relationships if r.type == "subtopic"] + \
-                         [r.to_id for r in relationships if r.type == "subtopic"]
-
         if prereq_nodes:
             lines.append(f"    class {' '.join(set(prereq_nodes))} prereqStyle;")
         if related_nodes:
@@ -118,7 +162,7 @@ def index() -> str:
 
 @app.route("/samples", methods=["GET"])
 def list_samples() -> dict[str, list[str]]:
-    """Return list of available preset names from samples/*.md"""
+    """Return list of available preset names from samples/*.md (sorted)."""
     return {"samples": get_sample_files()}
 
 
@@ -126,9 +170,10 @@ def list_samples() -> dict[str, list[str]]:
 def process() -> dict:
     """Process markdown and return skill map with Mermaid diagrams.
 
-    Accepts JSON body with either:
+    Accepts JSON body with ONE of:
         - {"markdown": "..."} - raw markdown content
-        - {"sample": "<name>"} - name of preset from samples/<name>.md
+        - {"sample_name": "..."} - name of preset from samples/<name>.md
+        - {"url": "..."} - URL to fetch and convert to markdown
 
     Returns JSON with:
         - topics: list of topic dicts
@@ -137,6 +182,7 @@ def process() -> dict:
         - mermaid_full: Mermaid graph string (all edges, colored by type)
         - errors: list of validation error messages (empty if valid)
         - source_id: SHA-256 hash of input for idempotency
+        - input_length: length of input markdown
     """
     from groq import Groq
 
@@ -144,9 +190,10 @@ def process() -> dict:
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    # Get markdown content from either direct input or sample file
+    # Get markdown content from one of the sources
     markdown: Optional[str] = data.get("markdown")
-    sample_name: Optional[str] = data.get("sample")
+    sample_name: Optional[str] = data.get("sample_name")
+    url: Optional[str] = data.get("url")
 
     if markdown is not None:
         text = markdown
@@ -155,8 +202,14 @@ def process() -> dict:
         if not sample_path.exists():
             return jsonify({"error": f"Sample '{sample_name}' not found"}), 404
         text = sample_path.read_text(encoding="utf-8")
+    elif url is not None:
+        text = fetch_url_to_markdown(url)
+        if text is None:
+            return jsonify({"error": f"Failed to fetch content from {url}"}), 400
     else:
-        return jsonify({"error": "Must provide either 'markdown' or 'sample'"}), 400
+        return jsonify({"error": "Must provide one of: markdown, sample_name, or url"}), 400
+
+    input_length = len(text)
 
     # Compute source ID for idempotency
     source_id = compute_source_id(text)
@@ -203,6 +256,7 @@ def process() -> dict:
         "mermaid_full": mermaid_full,
         "errors": errors,
         "source_id": source_id,
+        "input_length": input_length,
     })
 
 

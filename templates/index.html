@@ -21,7 +21,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
             background: #fff;
             border-radius: 8px;
@@ -41,41 +41,47 @@
             font-size: 0.95rem;
         }
 
-        .input-modes {
+        .tabs {
             display: flex;
-            gap: 20px;
+            gap: 5px;
             margin-bottom: 15px;
-            flex-wrap: wrap;
+            border-bottom: 2px solid #e0e0e0;
         }
 
-        .mode-option {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-
-        .mode-option input[type="radio"] {
-            accent-color: #0066cc;
-        }
-
-        .mode-option label {
+        .tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 4px 4px 0 0;
             cursor: pointer;
             font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .tab:hover {
+            background: #e0e0e0;
+        }
+
+        .tab.active {
+            background: #0066cc;
+            color: #fff;
         }
 
         .input-section {
             margin-bottom: 20px;
         }
 
-        #presetSection {
+        .input-mode {
             display: none;
-            margin-bottom: 15px;
         }
 
-        #presetSelect {
+        .input-mode.active {
+            display: block;
+        }
+
+        select, input[type="text"] {
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -93,39 +99,9 @@
             resize: vertical;
         }
 
-        textarea:focus {
+        select:focus, input:focus, textarea:focus {
             outline: none;
             border-color: #0066cc;
-        }
-
-        .file-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .file-btn {
-            padding: 8px 16px;
-            background: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-
-        .file-btn:hover {
-            background: #e0e0e0;
-        }
-
-        .file-name {
-            font-size: 0.85rem;
-            color: #666;
-            font-style: italic;
         }
 
         .btn-primary {
@@ -137,6 +113,7 @@
             font-size: 1rem;
             cursor: pointer;
             width: 100%;
+            max-width: 200px;
         }
 
         .btn-primary:hover {
@@ -202,14 +179,28 @@
             display: block;
         }
 
-        .topic-badge {
-            display: inline-block;
+        .badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .badge {
             padding: 4px 12px;
-            background: #0066cc;
-            color: #fff;
             border-radius: 12px;
             font-size: 0.85rem;
-            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .badge-count {
+            background: #0066cc;
+            color: #fff;
+        }
+
+        .badge-diff {
+            background: #e0e0e0;
+            color: #555;
         }
 
         .section-title {
@@ -233,10 +224,30 @@
             overflow-x: auto;
         }
 
+        .mermaid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .mermaid-wrapper {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+        }
+
+        .mermaid-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
         .topics-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
         }
 
         .topic-card {
@@ -255,7 +266,7 @@
         .topic-desc {
             font-size: 0.85rem;
             color: #555;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .topic-diff {
@@ -306,6 +317,12 @@
             color: #999;
             margin-top: 5px;
         }
+
+        @media (max-width: 768px) {
+            .mermaid-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -313,61 +330,55 @@
         <h1>Skill Extractor</h1>
         <p class="subtitle">Convert markdown learning materials into structured skill maps</p>
 
-        <div class="input-modes">
-            <div class="mode-option">
-                <input type="radio" id="pasteMode" name="inputMode" value="paste" checked>
-                <label for="pasteMode">Paste text</label>
-            </div>
-            <div class="mode-option">
-                <input type="radio" id="uploadMode" name="inputMode" value="upload">
-                <label for="uploadMode">Upload file</label>
-            </div>
-            <div class="mode-option">
-                <input type="radio" id="presetMode" name="inputMode" value="preset">
-                <label for="presetMode">Preset module</label>
-            </div>
+        <div class="tabs">
+            <button class="tab active" data-mode="preset">Preset Module</button>
+            <button class="tab" data-mode="paste">Paste Markdown</button>
+            <button class="tab" data-mode="url">Fetch from URL</button>
         </div>
 
         <div class="input-section">
-            <div id="presetSection">
+            <div id="presetMode" class="input-mode active">
                 <select id="presetSelect">
-                    <option value="">-- Select a preset --</option>
+                    <option value="">-- Select a preset module --</option>
                 </select>
             </div>
 
-            <div id="uploadSection" class="file-input-wrapper" style="display: none;">
-                <input type="file" id="fileInput" accept=".md,.txt">
-                <button type="button" class="file-btn" onclick="document.getElementById('fileInput').click()">
-                    Choose .md file
-                </button>
-                <span id="fileName" class="file-name"></span>
+            <div id="pasteMode" class="input-mode">
+                <textarea id="markdownInput" placeholder="Paste your markdown content here..."></textarea>
             </div>
 
-            <textarea id="markdownInput" placeholder="Paste your markdown content here..."></textarea>
+            <div id="urlMode" class="input-mode">
+                <input type="text" id="urlInput" placeholder="Enter URL to fetch (e.g., https://www.geeksforgeeks.org/python-basics/)">
+            </div>
         </div>
 
         <button id="generateBtn" class="btn-primary">Generate Skill Map</button>
 
         <div id="spinner" class="spinner">
-            Processing your markdown<span></span>
+            Processing<span></span>
         </div>
 
         <div id="results" class="results">
-            <span id="topicCount" class="topic-badge">0 topics</span>
+            <div class="badges">
+                <span id="topicCount" class="badge badge-count">0 topics</span>
+                <span id="diffMix" class="badge badge-diff"></span>
+            </div>
 
             <div id="errorsSection" class="errors" style="display: none;">
                 <div class="errors-title">Validation Errors</div>
                 <div id="errorsList"></div>
             </div>
 
-            <h3 class="section-title">Prerequisite Chain</h3>
-            <div class="mermaid-container">
-                <div id="mermaidPrereq" class="mermaid"></div>
-            </div>
-
-            <h3 class="section-title">Full Relationship Graph</h3>
-            <div class="mermaid-container">
-                <div id="mermaidFull" class="mermaid"></div>
+            <h3 class="section-title">Relationship Graphs</h3>
+            <div class="mermaid-row">
+                <div class="mermaid-wrapper">
+                    <div class="mermaid-label">Prerequisites Only</div>
+                    <div id="mermaidPrereq" class="mermaid"></div>
+                </div>
+                <div class="mermaid-wrapper">
+                    <div class="mermaid-label">All Relationships (Colored)</div>
+                    <div id="mermaidFull" class="mermaid"></div>
+                </div>
             </div>
 
             <h3 class="section-title">Topics</h3>
@@ -383,19 +394,16 @@
         mermaid.initialize({ startOnLoad: false, theme: 'default' });
 
         // DOM elements
-        const pasteMode = document.getElementById('pasteMode');
-        const uploadMode = document.getElementById('uploadMode');
-        const presetMode = document.getElementById('presetMode');
-        const presetSection = document.getElementById('presetSection');
-        const uploadSection = document.getElementById('uploadSection');
+        const tabs = document.querySelectorAll('.tab');
+        const inputModes = document.querySelectorAll('.input-mode');
         const presetSelect = document.getElementById('presetSelect');
         const markdownInput = document.getElementById('markdownInput');
-        const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
+        const urlInput = document.getElementById('urlInput');
         const generateBtn = document.getElementById('generateBtn');
         const spinner = document.getElementById('spinner');
         const results = document.getElementById('results');
         const topicCount = document.getElementById('topicCount');
+        const diffMix = document.getElementById('diffMix');
         const errorsSection = document.getElementById('errorsSection');
         const errorsList = document.getElementById('errorsList');
         const mermaidPrereq = document.getElementById('mermaidPrereq');
@@ -404,7 +412,22 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const sourceId = document.getElementById('sourceId');
 
+        let currentMode = 'preset';
         let currentResult = null;
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const mode = tab.dataset.mode;
+                currentMode = mode;
+
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                inputModes.forEach(m => m.classList.remove('active'));
+                document.getElementById(mode + 'Mode').classList.add('active');
+            });
+        });
 
         // Load available presets
         async function loadPresets() {
@@ -422,36 +445,8 @@
             }
         }
 
-        // Handle input mode changes
-        function setMode(mode) {
-            presetSection.style.display = mode === 'preset' ? 'block' : 'none';
-            uploadSection.style.display = mode === 'upload' ? 'flex' : 'none';
-            markdownInput.style.display = mode === 'upload' ? 'none' : 'block';
-
-            if (mode === 'preset') {
-                markdownInput.value = '';
-            }
-        }
-
-        pasteMode.addEventListener('change', () => setMode('paste'));
-        uploadMode.addEventListener('change', () => setMode('upload'));
-        presetMode.addEventListener('change', () => setMode('preset'));
-
-        // Handle file upload
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                fileName.textContent = file.name;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    markdownInput.value = ev.target.result;
-                };
-                reader.readAsText(file);
-            }
-        });
-
         // Handle preset selection
-        presetSelect.addEventListener('change', async () => {
+        presetSelect.addEventListener('change', () => {
             if (presetSelect.value) {
                 generateBtn.click();
             }
@@ -459,12 +454,28 @@
 
         // Generate skill map
         generateBtn.addEventListener('click', async () => {
-            const markdown = markdownInput.value.trim();
-            const sample = presetSelect.value;
+            let body = {};
 
-            if (!markdown && !sample) {
-                alert('Please enter markdown text or select a preset');
-                return;
+            if (currentMode === 'preset') {
+                if (!presetSelect.value) {
+                    alert('Please select a preset module');
+                    return;
+                }
+                body = { sample_name: presetSelect.value };
+            } else if (currentMode === 'paste') {
+                const markdown = markdownInput.value.trim();
+                if (!markdown) {
+                    alert('Please enter markdown text');
+                    return;
+                }
+                body = { markdown };
+            } else if (currentMode === 'url') {
+                const url = urlInput.value.trim();
+                if (!url) {
+                    alert('Please enter a URL');
+                    return;
+                }
+                body = { url };
             }
 
             // Show loading state
@@ -473,7 +484,6 @@
             results.classList.remove('active');
 
             try {
-                const body = sample ? { sample } : { markdown };
                 const resp = await fetch('/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -496,8 +506,14 @@
         });
 
         function displayResults(data) {
-            // Update topic count
-            topicCount.textContent = `${data.topics.length} topic${data.topics.length !== 1 ? 's' : ''}`;
+            // Update badges
+            const total = data.topics.length;
+            const beginner = data.topics.filter(t => t.difficulty === 'beginner').length;
+            const intermediate = data.topics.filter(t => t.difficulty === 'intermediate').length;
+            const advanced = data.topics.filter(t => t.difficulty === 'advanced').length;
+
+            topicCount.textContent = `${total} topic${total !== 1 ? 's' : ''}`;
+            diffMix.textContent = `${beginner} beginner, ${intermediate} intermediate, ${advanced} advanced`;
 
             // Show errors if any
             if (data.errors && data.errors.length > 0) {
@@ -522,7 +538,7 @@
             `).join('');
 
             // Update source ID
-            sourceId.textContent = `Source ID: ${data.source_id}`;
+            sourceId.textContent = `Source ID: ${data.source_id} • Input length: ${data.input_length} chars`;
 
             // Show results
             results.classList.add('active');
