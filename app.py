@@ -36,11 +36,15 @@ Relationship = skill_extractor.Relationship
 SkillMap = skill_extractor.SkillMap
 
 # Import pipeline functions
-split_sections = skill_extractor.split_sections
-extract_topics = skill_extractor.extract_topics
-deduplicate_topics = skill_extractor.deduplicate_topics
-find_relationships = skill_extractor.find_relationships
-validate = skill_extractor.validate
+try:
+    split_sections = skill_extractor.split_sections
+    extract_topics = skill_extractor.extract_topics
+    deduplicate_topics = skill_extractor.deduplicate_topics
+    find_relationships = skill_extractor.find_relationships
+    validate = skill_extractor.validate
+except Exception as e:
+    print(f"ERROR importing from skill_extractor: {e}", flush=True)
+    raise
 
 # Fetching configuration
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -50,6 +54,9 @@ TAGS_TO_STRIP = ["nav", "footer", "script", "style", "noscript", "iframe", "asid
 # Cache directory
 CACHE_DIR = Path(__file__).parent / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
+
+# Ensure samples directory exists (even if empty)
+(Path(__file__).parent / "samples").mkdir(exist_ok=True)
 
 
 def get_sample_files() -> list[str]:
