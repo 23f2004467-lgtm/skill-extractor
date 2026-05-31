@@ -44,7 +44,7 @@ def load_env():
 
 load_env()
 
-# Provider preference: OpenRouter > Gemini > Groq
+# Pick provider based on available API key
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -78,7 +78,7 @@ elif USE_GEMINI:
     _gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
 
 
-# ─── Pydantic models — the contract for everything below ────────────────
+# Pydantic models
 
 class Topic(BaseModel):
     id: str = Field(..., pattern=r"^[a-z0-9-]+$")
@@ -98,14 +98,10 @@ class SkillMap(BaseModel):
     relationships: list[Relationship]
 
 
-# ─── Pipeline functions — we'll fill these in one at a time ─────────────
+# Pipeline functions
 
 def split_sections(text: str) -> list[str]:
-    """Split a markdown string into sections on H1/H2 headings.
-
-    Returns a list of section strings. If the document has no headings,
-    returns a single-element list with the whole text.
-    """
+    """Split markdown into sections on H1/H2 headings."""
     # Find every line that starts with # or ## (H1 or H2).
     # The (?=^#{1,2} ) is a lookahead — it matches the position right
     # before a heading line, so we split *at* the boundary but the
@@ -125,12 +121,7 @@ def split_sections(text: str) -> list[str]:
 
 
 def extract_topics(section: str, client=None) -> list[Topic]:
-    """Ask LLM to extract topics from a single section.
-
-    Uses OpenRouter/Gemini/Groq tool-use to force a schema-conformant response.
-    Returns a list of Topic objects. Raises ValueError if the response can't
-    be parsed into valid Topics after Pydantic validation.
-    """
+    """Extract topics from a section using LLM tool-use."""
     if USE_OPENROUTER:
         return _extract_topics_openrouter(section, client)
     elif USE_GEMINI:
@@ -207,7 +198,7 @@ def _extract_topics_openrouter(section: str, client: OpenAI | None = None) -> li
             topic = Topic(**raw_topic)
             topics.append(topic)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid topic {raw_topic.get('name', '?')}: {e}")
+            print(f"  WARNING: skipping invalid topic {raw_topic.get('name', '?')}: {e}")
 
     return topics
 
@@ -306,7 +297,7 @@ def _extract_topics_gemini(section: str, client: genai.Client | None = None) -> 
             topic = Topic(**raw_topic)
             topics.append(topic)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid topic {raw_topic.get('name', '?')}: {e}")
+            print(f"  WARNING: skipping invalid topic {raw_topic.get('name', '?')}: {e}")
 
     return topics
 
@@ -380,16 +371,13 @@ def _extract_topics_groq(section: str, client) -> list[Topic]:
             topic = Topic(**raw_topic)
             topics.append(topic)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid topic {raw_topic.get('name', '?')}: {e}")
+            print(f"  WARNING: skipping invalid topic {raw_topic.get('name', '?')}: {e}")
 
     return topics
 
 
 def deduplicate_topics(topics: list[Topic]) -> list[Topic]:
-    """Remove duplicate topics across sections, keying by lowercased name.
-
-    Keeps the first occurrence. Returns a new list, doesn't mutate input.
-    """
+    """Remove duplicate topics by normalized name."""
     seen: set[str] = set()
     unique: list[Topic] = []
     for topic in topics:
@@ -507,7 +495,7 @@ def _find_relationships_openrouter(
             rel = Relationship(**raw_rel)
             relationships.append(rel)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid relationship {raw_rel}: {e}")
+            print(f"  WARNING: skipping invalid relationship {raw_rel}: {e}")
 
     return relationships
 
@@ -625,7 +613,7 @@ def _find_relationships_gemini(
             rel = Relationship(**raw_rel)
             relationships.append(rel)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid relationship {raw_rel}: {e}")
+            print(f"  WARNING: skipping invalid relationship {raw_rel}: {e}")
 
     return relationships
 
@@ -715,7 +703,7 @@ def _find_relationships_groq(
             rel = Relationship(**raw_rel)
             relationships.append(rel)
         except ValidationError as e:
-            print(f"  ⚠ skipping invalid relationship {raw_rel}: {e}")
+            print(f"  WARNING: skipping invalid relationship {raw_rel}: {e}")
 
     return relationships
 
@@ -723,14 +711,7 @@ def validate(
     topics: list[Topic],
     relationships: list[Relationship],
 ) -> list[str]:
-    """Check the skill map for structural problems.
-
-    Returns a list of error messages. Empty list = all good.
-    Checks:
-      - dangling references (from_id or to_id not in topic ids)
-      - self-loops (from_id == to_id)
-      - cycles in the prerequisite subgraph
-    """
+    """Check for dangling refs, self-loops, and cycles in prerequisite chains."""
     errors: list[str] = []
     topic_ids = {t.id for t in topics}
 
@@ -760,13 +741,8 @@ def validate(
         ):
             adjacency[r.from_id].append(r.to_id)
 
-    # DFS with three colors — the classic cycle-detection algorithm.
-    #   WHITE (0) = never visited
-    #   GRAY  (1) = currently on the DFS path (we're inside its subtree)
-    #   BLACK (2) = fully processed, confirmed no cycle from here
-    #
-    # A cycle exists iff DFS encounters a GRAY node — that means we've
-    # looped back to a node already on the current path.
+    # DFS cycle detection using three colors:
+    #   WHITE (0) = never visited, GRAY (1) = on current path, BLACK (2) = processed
     WHITE, GRAY, BLACK = 0, 1, 2
     color = {tid: WHITE for tid in topic_ids}
     reported_cycles: set[tuple[str, ...]] = set()
@@ -799,12 +775,7 @@ def validate(
 
 
 def print_tree(skill_map: SkillMap) -> None:
-    """Print a text-tree view of the prerequisite chains.
-
-    Topics with no incoming prerequisite edges are roots; print each root
-    and its descendants indented underneath. Other relationship types
-    (subtopic, related) are summarized below the tree.
-    """
+    """Print prerequisite chains as a tree, summarize other relationships."""
     if not skill_map.topics:
         print("(no topics)")
         return
@@ -879,7 +850,7 @@ def print_tree(skill_map: SkillMap) -> None:
             if f and t:
                 print(f"  {f.name} ↔ {t.name}")
 
-# ─── Main entry point ───────────────────────────────────────────────────
+# Main entry point
 
 def main(input_path: str) -> None:
     # Initialize client based on provider

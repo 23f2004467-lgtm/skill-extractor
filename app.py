@@ -8,53 +8,15 @@ Wraps the existing skill_extractor.py without modifying it.
 import hashlib
 import json
 import os
-import sys
-import traceback
 from pathlib import Path
 from typing import Optional
 
-print("=== Starting app.py import ===", flush=True, file=sys.stderr)
+import requests
+from bs4 import BeautifulSoup
+from flask import Flask, jsonify, render_template, request
+from markdownify import markdownify as md
 
-try:
-    import requests
-    print("✓ requests imported", flush=True, file=sys.stderr)
-except Exception as e:
-    print(f"✗ Failed to import requests: {e}", flush=True, file=sys.stderr)
-    traceback.print_exc()
-    raise
-
-try:
-    from bs4 import BeautifulSoup
-    print("✓ BeautifulSoup imported", flush=True, file=sys.stderr)
-except Exception as e:
-    print(f"✗ Failed to import BeautifulSoup: {e}", flush=True, file=sys.stderr)
-    traceback.print_exc()
-    raise
-
-try:
-    from flask import Flask, jsonify, render_template, request
-    print("✓ Flask imported", flush=True, file=sys.stderr)
-except Exception as e:
-    print(f"✗ Failed to import Flask: {e}", flush=True, file=sys.stderr)
-    traceback.print_exc()
-    raise
-
-try:
-    from markdownify import markdownify as md
-    print("✓ markdownify imported", flush=True, file=sys.stderr)
-except Exception as e:
-    print(f"✗ Failed to import markdownify: {e}", flush=True, file=sys.stderr)
-    traceback.print_exc()
-    raise
-
-print("=== Importing skill_extractor ===", flush=True, file=sys.stderr)
-try:
-    import skill_extractor
-    print("✓ skill_extractor imported", flush=True, file=sys.stderr)
-except Exception as e:
-    print(f"✗ Failed to import skill_extractor: {e}", flush=True, file=sys.stderr)
-    traceback.print_exc()
-    raise
+import skill_extractor
 
 # Initialize Flask app
 app = Flask(__name__)
