@@ -28,7 +28,9 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-from groq import Groq
+from google import genai
+from google.genai import types
+from openai import OpenAI
 from pydantic import BaseModel, Field, ValidationError
 
 # Load .env manually (no python-dotenv dep; keep deps small)
@@ -42,9 +44,38 @@ def load_env():
 
 load_env()
 
-GROQ_API_KEY = os.environ["GROQ_API_KEY"]
-MODEL = "llama-3.3-70b-versatile"
+# Provider preference: OpenRouter > Gemini > Groq
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+
+# Determine which provider to use
+USE_OPENROUTER = bool(OPENROUTER_API_KEY)
+USE_GEMINI = not USE_OPENROUTER and bool(GOOGLE_API_KEY)
+USE_GROQ = not USE_OPENROUTER and not USE_GEMINI
+
+# Model selection
+if USE_OPENROUTER:
+    MODEL = "meta-llama/llama-3.3-70b-instruct"  # Fast, reliable on OpenRouter
+elif USE_GEMINI:
+    MODEL = "gemini-2.5-flash"
+else:
+    MODEL = "llama-3.3-70b-versatile"
+
 MAX_RETRIES = 3
+
+# Initialize clients
+_openrouter_client = None
+_gemini_client = None
+_groq_client = None
+
+if USE_OPENROUTER:
+    _openrouter_client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+elif USE_GEMINI:
+    _gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
 
 
 # ─── Pydantic models — the contract for everything below ────────────────
@@ -93,15 +124,26 @@ def split_sections(text: str) -> list[str]:
     return sections    
 
 
-def extract_topics(section: str, client: Groq) -> list[Topic]:
-    """Ask Groq to extract topics from a single section.
+def extract_topics(section: str, client=None) -> list[Topic]:
+    """Ask LLM to extract topics from a single section.
 
-    Uses tool-use to force a schema-conformant response. Returns a list of
-    Topic objects. Raises ValueError if the response can't be parsed into
-    valid Topics after Pydantic validation.
+    Uses OpenRouter/Gemini/Groq tool-use to force a schema-conformant response.
+    Returns a list of Topic objects. Raises ValueError if the response can't
+    be parsed into valid Topics after Pydantic validation.
     """
-        # Define the tool the model must call. This is a JSON Schema description
-    # of what topics look like. The model can't respond with anything else.
+    if USE_OPENROUTER:
+        return _extract_topics_openrouter(section, client)
+    elif USE_GEMINI:
+        return _extract_topics_gemini(section, client)
+    else:
+        return _extract_topics_groq(section, client)
+
+
+def _extract_topics_openrouter(section: str, client: OpenAI | None = None) -> list[Topic]:
+    """Extract topics using OpenRouter (OpenAI-compatible API)."""
+    if client is None:
+        client = _openrouter_client
+
     tool_definition = {
         "type": "function",
         "function": {
@@ -115,28 +157,20 @@ def extract_topics(section: str, client: Groq) -> list[Topic]:
                         "items": {
                             "type": "object",
                             "properties": {
-                                "id": {
-                                    "type": "string",
-                                    "description": "A short slug: lowercase letters, digits, hyphens only.",
-                                    "pattern": "^[a-z0-9-]+$",
-                                },
+                                "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
                                 "name": {"type": "string"},
                                 "description": {"type": "string"},
-                                "difficulty": {
-                                    "type": "string",
-                                    "enum": ["beginner", "intermediate", "advanced"],
-                                },
+                                "difficulty": {"type": "string", "enum": ["beginner", "intermediate", "advanced"]},
                             },
                             "required": ["id", "name", "description", "difficulty"],
                         },
-                    },
+                    }
                 },
                 "required": ["topics"],
             },
         },
     }
 
-    # System prompt sets the assistant's role and the rules.
     system_prompt = (
         "You extract technical topics from learning material. "
         "For each topic, provide: a short slug-style id (lowercase letters, "
@@ -146,37 +180,200 @@ def extract_topics(section: str, client: Groq) -> list[Topic]:
         "Do not invent topics that aren't there."
     )
 
-    # User prompt is the content we want extraction from.
-    user_prompt = f"Extract topics from this section:\n\n{section}"
-
-    # Make the call. tool_choice forces the model to call our tool.
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "user", "content": f"Extract topics from this section:\n\n{section}"},
         ],
         tools=[tool_definition],
         tool_choice={"type": "function", "function": {"name": "record_topics"}},
         temperature=0,
     )
 
-    # The model's response is in choices[0].message. If it called the tool,
-    # tool_calls will be a non-empty list. Otherwise, treat as failure.
     message = response.choices[0].message
     if not message.tool_calls:
         raise ValueError("LLM did not call the record_topics tool")
 
-    # The tool arguments come back as a JSON-encoded string. Parse them.
     tool_call = message.tool_calls[0]
     try:
         args = json.loads(tool_call.function.arguments)
     except json.JSONDecodeError as e:
         raise ValueError(f"LLM returned invalid JSON: {e}")
 
-    # Validate each raw topic dict through our Pydantic Topic model.
-    # If a topic fails validation (wrong shape, bad id, missing field),
-    # skip it with a warning rather than crashing the whole pipeline.
+    topics: list[Topic] = []
+    for raw_topic in args.get("topics", []):
+        try:
+            topic = Topic(**raw_topic)
+            topics.append(topic)
+        except ValidationError as e:
+            print(f"  ⚠ skipping invalid topic {raw_topic.get('name', '?')}: {e}")
+
+    return topics
+
+
+def _extract_topics_gemini(section: str, client: genai.Client | None = None) -> list[Topic]:
+    """Extract topics using Gemini's function calling API (new google.genai package)."""
+    if client is None:
+        client = _gemini_client
+
+    # Define the tool for Gemini
+    tool_definition = types.FunctionDeclaration(
+        name="record_topics",
+        description="Record the technical topics found in this section of learning material.",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "topics": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "id": types.Schema(
+                                type=types.Type.STRING,
+                                description="A short slug: lowercase letters, digits, hyphens only."
+                            ),
+                            "name": types.Schema(type=types.Type.STRING),
+                            "description": types.Schema(type=types.Type.STRING),
+                            "difficulty": types.Schema(
+                                type=types.Type.STRING,
+                                enum=["beginner", "intermediate", "advanced"]
+                            ),
+                        },
+                        required=["id", "name", "description", "difficulty"]
+                    )
+                )
+            },
+            required=["topics"]
+        )
+    )
+
+    system_prompt = (
+        "You extract technical topics from learning material. "
+        "For each topic, provide: a short slug-style id (lowercase letters, "
+        "numbers, hyphens only — no spaces), a short human-readable name, "
+        "a one-sentence description, and a difficulty level. "
+        "Only extract topics that are actually present in the text. "
+        "Do not invent topics that aren't there."
+    )
+
+    user_prompt = f"Extract topics from this section:\n\n{section}"
+    full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=full_prompt,
+        config=types.GenerateContentConfig(
+            tools=[types.Tool(function_declarations=[tool_definition])],
+            temperature=0
+        )
+    )
+
+    # Check for valid response
+    if not response.candidates:
+        raise ValueError("Gemini returned no candidates")
+
+    candidate = response.candidates[0]
+
+    # Check finish_reason for blocked/empty responses
+    if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+        if candidate.finish_reason.name in ('RECITATION', 'SAFETY', 'BLOCKED'):
+            raise ValueError(f"Response blocked: {candidate.finish_reason.name}")
+
+    if not candidate.content:
+        raise ValueError("Gemini returned no content")
+
+    if not candidate.content.parts or len(candidate.content.parts) == 0:
+        raise ValueError("Gemini returned empty parts list")
+
+    # Find the part with function_call (may be after text parts)
+    function_call_part = None
+    for part in candidate.content.parts:
+        if part.function_call:
+            function_call_part = part
+            break
+
+    if not function_call_part:
+        raise ValueError("LLM did not call the record_topics tool")
+
+    # In new API, args is already a dict
+    args = function_call_part.function_call.args
+
+    # Validate through Pydantic
+    topics: list[Topic] = []
+    for raw_topic in args.get("topics", []):
+        try:
+            topic = Topic(**raw_topic)
+            topics.append(topic)
+        except ValidationError as e:
+            print(f"  ⚠ skipping invalid topic {raw_topic.get('name', '?')}: {e}")
+
+    return topics
+
+
+def _extract_topics_groq(section: str, client) -> list[Topic]:
+    """Extract topics using Groq's function calling API (fallback)."""
+    from groq import Groq
+    if client is None:
+        client = Groq(api_key=GROQ_API_KEY)
+
+    tool_definition = {
+        "type": "function",
+        "function": {
+            "name": "record_topics",
+            "description": "Record the technical topics found in this section of learning material.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+                                "name": {"type": "string"},
+                                "description": {"type": "string"},
+                                "difficulty": {"type": "string", "enum": ["beginner", "intermediate", "advanced"]},
+                            },
+                            "required": ["id", "name", "description", "difficulty"],
+                        },
+                    }
+                },
+                "required": ["topics"],
+            },
+        },
+    }
+
+    system_prompt = (
+        "You extract technical topics from learning material. "
+        "For each topic, provide: a short slug-style id (lowercase letters, "
+        "numbers, hyphens only — no spaces), a short human-readable name, "
+        "a one-sentence description, and a difficulty level. "
+        "Only extract topics that are actually present in the text. "
+        "Do not invent topics that aren't there."
+    )
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Extract topics from this section:\n\n{section}"},
+        ],
+        tools=[tool_definition],
+        tool_choice={"type": "function", "function": {"name": "record_topics"}},
+        temperature=0,
+    )
+
+    message = response.choices[0].message
+    if not message.tool_calls:
+        raise ValueError("LLM did not call the record_topics tool")
+
+    tool_call = message.tool_calls[0]
+    try:
+        args = json.loads(tool_call.function.arguments)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"LLM returned invalid JSON: {e}")
+
     topics: list[Topic] = []
     for raw_topic in args.get("topics", []):
         try:
@@ -209,33 +406,43 @@ def deduplicate_topics(topics: list[Topic]) -> list[Topic]:
 
 def find_relationships(
     topics: list[Topic],
-    client: Groq,
+    client=None,
     feedback: str = "",
 ) -> list[Relationship]:
-    """Ask Groq to identify relationships between the given topics.
+    """Ask LLM to identify relationships between the given topics.
 
     The prompt constrains valid IDs to those in the topics list.
     If `feedback` is non-empty, it gets prepended to the prompt so the
     model knows what went wrong on the previous attempt.
     """
-    # Build a list of valid topic IDs to show the model.
-    # The model must only use these IDs in its relationships.
+    if USE_OPENROUTER:
+        return _find_relationships_openrouter(topics, client, feedback)
+    elif USE_GEMINI:
+        return _find_relationships_gemini(topics, client, feedback)
+    else:
+        return _find_relationships_groq(topics, client, feedback)
+
+
+def _find_relationships_openrouter(
+    topics: list[Topic],
+    client: OpenAI | None = None,
+    feedback: str = "",
+) -> list[Relationship]:
+    """Find relationships using OpenRouter (OpenAI-compatible API)."""
+    if client is None:
+        client = _openrouter_client
+
     topic_list = "\n".join(
         f"  - {t.id}: {t.name} ({t.difficulty})"
         for t in topics
     )
     valid_ids = [t.id for t in topics]
 
-    # Tool definition — same structure pattern as record_topics,
-    # but for relationships. Each relationship has from_id, to_id, type.
     tool_definition = {
         "type": "function",
         "function": {
             "name": "record_relationships",
-            "description": (
-                "Record typed relationships between the given topics. "
-                "from_id and to_id must be drawn from the provided topic list."
-            ),
+            "description": "Record typed relationships between the given topics. from_id and to_id must be drawn from the provided topic list.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -244,24 +451,13 @@ def find_relationships(
                         "items": {
                             "type": "object",
                             "properties": {
-                                "from_id": {
-                                    "type": "string",
-                                    "enum": valid_ids,
-                                    "description": "The id of the source topic.",
-                                },
-                                "to_id": {
-                                    "type": "string",
-                                    "enum": valid_ids,
-                                    "description": "The id of the target topic.",
-                                },
-                                "type": {
-                                    "type": "string",
-                                    "enum": ["prerequisite", "related", "subtopic"],
-                                },
+                                "from_id": {"type": "string", "enum": valid_ids},
+                                "to_id": {"type": "string", "enum": valid_ids},
+                                "type": {"type": "string", "enum": ["prerequisite", "related", "subtopic"]},
                             },
                             "required": ["from_id", "to_id", "type"],
                         },
-                    },
+                    }
                 },
                 "required": ["relationships"],
             },
@@ -278,21 +474,12 @@ def find_relationships(
         "Do not create relationships where from_id equals to_id."
     )
 
-    # The user prompt includes the topic list, any feedback from a previous
-    # failed attempt, and an instruction.
-    user_prompt_parts = [
-        "Here are the topics:\n",
-        topic_list,
-        "\n\n",
-    ]
+    user_prompt_parts = ["Here are the topics:\n", topic_list, "\n\n"]
     if feedback:
         user_prompt_parts.append(feedback + "\n\n")
-    user_prompt_parts.append(
-        "Identify the relationships between these topics."
-    )
+    user_prompt_parts.append("Identify the relationships between these topics.")
     user_prompt = "".join(user_prompt_parts)
 
-    # Call the API, forcing tool use.
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -300,14 +487,10 @@ def find_relationships(
             {"role": "user", "content": user_prompt},
         ],
         tools=[tool_definition],
-        tool_choice={
-            "type": "function",
-            "function": {"name": "record_relationships"},
-        },
+        tool_choice={"type": "function", "function": {"name": "record_relationships"}},
         temperature=0,
     )
 
-    # Pull out the tool call and parse its arguments.
     message = response.choices[0].message
     if not message.tool_calls:
         raise ValueError("LLM did not call the record_relationships tool")
@@ -318,8 +501,214 @@ def find_relationships(
     except json.JSONDecodeError as e:
         raise ValueError(f"LLM returned invalid JSON: {e}")
 
-    # Validate each raw relationship dict through our Pydantic model.
-    # Skip invalid ones with a warning rather than crashing.
+    relationships: list[Relationship] = []
+    for raw_rel in args.get("relationships", []):
+        try:
+            rel = Relationship(**raw_rel)
+            relationships.append(rel)
+        except ValidationError as e:
+            print(f"  ⚠ skipping invalid relationship {raw_rel}: {e}")
+
+    return relationships
+
+
+def _find_relationships_gemini(
+    topics: list[Topic],
+    client: genai.Client | None = None,
+    feedback: str = "",
+) -> list[Relationship]:
+    """Find relationships using Gemini's function calling API (new google.genai package)."""
+    if client is None:
+        client = _gemini_client
+
+    topic_list = "\n".join(
+        f"  - {t.id}: {t.name} ({t.difficulty})"
+        for t in topics
+    )
+    valid_ids = [t.id for t in topics]
+
+    # Define tool for Gemini
+    tool_definition = types.FunctionDeclaration(
+        name="record_relationships",
+        description="Record typed relationships between the given topics. from_id and to_id must be drawn from the provided topic list.",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "relationships": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "from_id": types.Schema(
+                                type=types.Type.STRING,
+                                description="The id of the source topic.",
+                            ),
+                            "to_id": types.Schema(
+                                type=types.Type.STRING,
+                                description="The id of the target topic.",
+                            ),
+                            "type": types.Schema(
+                                type=types.Type.STRING,
+                                enum=["prerequisite", "related", "subtopic"]
+                            ),
+                        },
+                        required=["from_id", "to_id", "type"]
+                    )
+                )
+            },
+            required=["relationships"]
+        )
+    )
+
+    system_prompt = (
+        "You identify learning relationships between technical topics. "
+        "Use 'prerequisite' when one topic must be learned before another. "
+        "Use 'subtopic' when one topic is a structural part of another. "
+        "Use 'related' when two topics are connected but neither is a prerequisite. "
+        "Only use ids from the provided topic list. "
+        "Do not invent ids that aren't listed. "
+        "Do not create relationships where from_id equals to_id."
+    )
+
+    user_prompt_parts = [
+        "Here are the topics:\n",
+        topic_list,
+        "\n\n",
+    ]
+    if feedback:
+        user_prompt_parts.append(feedback + "\n\n")
+    user_prompt_parts.append("Identify the relationships between these topics.")
+    full_prompt = "".join(user_prompt_parts)
+
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=full_prompt,
+        config=types.GenerateContentConfig(
+            tools=[types.Tool(function_declarations=[tool_definition])],
+            temperature=0
+        )
+    )
+
+    # Check for valid response
+    if not response.candidates:
+        raise ValueError("Gemini returned no candidates")
+
+    candidate = response.candidates[0]
+
+    # Check finish_reason for blocked/empty responses
+    if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+        if candidate.finish_reason.name in ('RECITATION', 'SAFETY', 'BLOCKED'):
+            raise ValueError(f"Response blocked: {candidate.finish_reason.name}")
+
+    if not candidate.content:
+        raise ValueError("Gemini returned no content")
+
+    if not candidate.content.parts or len(candidate.content.parts) == 0:
+        raise ValueError("Gemini returned empty parts list")
+
+    # Find the part with function_call (may be after text parts)
+    function_call_part = None
+    for part in candidate.content.parts:
+        if part.function_call:
+            function_call_part = part
+            break
+
+    if not function_call_part:
+        raise ValueError("LLM did not call the record_relationships tool")
+
+    # In new API, args is already a dict
+    args = function_call_part.function_call.args
+
+    relationships: list[Relationship] = []
+    for raw_rel in args.get("relationships", []):
+        try:
+            rel = Relationship(**raw_rel)
+            relationships.append(rel)
+        except ValidationError as e:
+            print(f"  ⚠ skipping invalid relationship {raw_rel}: {e}")
+
+    return relationships
+
+
+def _find_relationships_groq(
+    topics: list[Topic],
+    client,
+    feedback: str = "",
+) -> list[Relationship]:
+    """Find relationships using Groq's function calling API (fallback)."""
+    from groq import Groq
+    if client is None:
+        client = Groq(api_key=GROQ_API_KEY)
+
+    topic_list = "\n".join(
+        f"  - {t.id}: {t.name} ({t.difficulty})"
+        for t in topics
+    )
+    valid_ids = [t.id for t in topics]
+
+    tool_definition = {
+        "type": "function",
+        "function": {
+            "name": "record_relationships",
+            "description": "Record typed relationships between the given topics. from_id and to_id must be drawn from the provided topic list.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "from_id": {"type": "string", "enum": valid_ids},
+                                "to_id": {"type": "string", "enum": valid_ids},
+                                "type": {"type": "string", "enum": ["prerequisite", "related", "subtopic"]},
+                            },
+                            "required": ["from_id", "to_id", "type"],
+                        },
+                    }
+                },
+                "required": ["relationships"],
+            },
+        },
+    }
+
+    system_prompt = (
+        "You identify learning relationships between technical topics. "
+        "Use 'prerequisite' when one topic must be learned before another. "
+        "Use 'subtopic' when one topic is a structural part of another. "
+        "Use 'related' when two topics are connected but neither is a prerequisite. "
+        "Only use ids from the provided topic list. "
+        "Do not invent ids that aren't listed. "
+        "Do not create relationships where from_id equals to_id."
+    )
+
+    user_prompt_parts = ["Here are the topics:\n", topic_list, "\n\n"]
+    if feedback:
+        user_prompt_parts.append(feedback + "\n\n")
+    user_prompt_parts.append("Identify the relationships between these topics.")
+    user_prompt = "".join(user_prompt_parts)
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        tools=[tool_definition],
+        tool_choice={"type": "function", "function": {"name": "record_relationships"}},
+        temperature=0,
+    )
+
+    message = response.choices[0].message
+    if not message.tool_calls:
+        raise ValueError("LLM did not call the record_relationships tool")
+
+    tool_call = message.tool_calls[0]
+    try:
+        args = json.loads(tool_call.function.arguments)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"LLM returned invalid JSON: {e}")
+
     relationships: list[Relationship] = []
     for raw_rel in args.get("relationships", []):
         try:
@@ -493,7 +882,17 @@ def print_tree(skill_map: SkillMap) -> None:
 # ─── Main entry point ───────────────────────────────────────────────────
 
 def main(input_path: str) -> None:
-    client = Groq(api_key=GROQ_API_KEY)
+    # Initialize client based on provider
+    if USE_OPENROUTER:
+        client = _openrouter_client
+        print(f"Using OpenRouter model: {MODEL}")
+    elif USE_GEMINI:
+        client = _gemini_client
+        print(f"Using Gemini model: {MODEL}")
+    else:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+        print(f"Using Groq model: {MODEL}")
 
     # 1. Read input
     text = Path(input_path).read_text(encoding="utf-8")
