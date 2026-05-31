@@ -728,7 +728,15 @@
                     }
                 },
                 physics: {
-                    enabled: false
+                    enabled: true,
+                    stabilization: { iterations: 100 },
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        centralGravity: 0.3,
+                        springLength: 150,
+                        springConstant: 0.04,
+                        damping: 0.09
+                    }
                 },
                 interaction: {
                     hover: true,
@@ -746,6 +754,12 @@
             }
 
             network = new vis.Network(container, networkData, options);
+
+            // Once stabilized, disable physics and fit the view
+            network.on('stabilizationIterationsDone', () => {
+                network.setOptions({ physics: { enabled: false } });
+                network.fit({ animation: true });
+            });
         }
 
         function getNodeColor(difficulty) {
